@@ -1,0 +1,4 @@
+C:\Users\86135\Desktop\GPU_raytracing\x64\Debug\GPU_raytracing.vcxproj.CopyComplete
+C:\Users\86135\Desktop\GPU_raytracing\x64\Debug\GPU_raytracing.exe
+C:\Users\86135\Desktop\GPU_raytracing\x64\Debug\freeglutd.dll
+C:\Users\86135\Desktop\GPU_raytracing\x64\Debug\glew32d.dll
