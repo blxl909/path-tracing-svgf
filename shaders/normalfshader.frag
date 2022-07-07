@@ -12,7 +12,7 @@ in vec3 Normal;
 void main()
 {    
     // store the fragment position vector in the first gbuffer texture
-    gNormal =vec4 (Normal,1.0);
+    gNormal =vec4 (Normal,gl_FragCoord.z);
     // also store the per-fragment normals into the gbuffer
     clipPos =vec4( FragPos,1.0);
 

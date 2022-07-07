@@ -2,7 +2,7 @@
 // this pass culculate the real variance 
 //the reproject pass only culculate the variance during time
 //but if history is lowwer than 4 ,time variance is untrustable, so we culculate the variance in space
-//besides, this pass also add a cross bilateral fileter (use w weight in paper) to the image
+//besides, this pass also add a cross bilateral fileter (use w weight in paper) to calculate the color and varience when history is lowwer than 4
 //the real variance is store in the w channel in output
 in vec3 pix;     //[-1,1]
 

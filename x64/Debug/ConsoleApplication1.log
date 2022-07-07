@@ -1,0 +1,26 @@
+﻿  ConsoleApplication1.cpp
+C:\Users\86135\Desktop\text\ConsoleApplication1.cpp(203,27): warning C4305: “初始化”: 从“double”到“float”截断
+C:\Users\86135\Desktop\text\ConsoleApplication1.cpp(204,27): warning C4305: “初始化”: 从“double”到“float”截断
+C:\Users\86135\Desktop\text\ConsoleApplication1.cpp(205,27): warning C4305: “初始化”: 从“double”到“float”截断
+C:\Users\86135\Desktop\text\ConsoleApplication1.cpp(206,26): warning C4305: “初始化”: 从“double”到“float”截断
+C:\Users\86135\Desktop\text\ConsoleApplication1.cpp(207,26): warning C4305: “初始化”: 从“double”到“float”截断
+C:\Users\86135\Desktop\text\ConsoleApplication1.cpp(208,26): warning C4305: “初始化”: 从“double”到“float”截断
+C:\Users\86135\Desktop\text\ConsoleApplication1.cpp(288,31): warning C4267: “初始化”: 从“size_t”转换到“int”，可能丢失数据
+C:\Users\86135\Desktop\text\ConsoleApplication1.cpp(357,27): warning C4267: “初始化”: 从“size_t”转换到“int”，可能丢失数据
+C:\Users\86135\Desktop\text\ConsoleApplication1.cpp(444,16): warning C4244: “初始化”: 从“double”转换到“float”，可能丢失数据
+C:\Users\86135\Desktop\text\ConsoleApplication1.cpp(453,17): warning C4244: “初始化”: 从“double”转换到“float”，可能丢失数据
+C:\Users\86135\Desktop\text\ConsoleApplication1.cpp(500,14): warning C4244: “初始化”: 从“double”转换到“float”，可能丢失数据
+C:\Users\86135\Desktop\text\ConsoleApplication1.cpp(560,10): warning C4244: “初始化”: 从“__int64”转换到“int”，可能丢失数据
+C:\Users\86135\Desktop\text\ConsoleApplication1.cpp(562,10): warning C4244: “初始化”: 从“__int64”转换到“int”，可能丢失数据
+C:\Users\86135\Desktop\text\ConsoleApplication1.cpp(602,1): warning C4267: “=”: 从“size_t”转换到“int”，可能丢失数据
+C:\Users\86135\Desktop\text\ConsoleApplication1.cpp(631,1): warning C4267: “参数”: 从“size_t”转换到“GLsizei”，可能丢失数据
+C:\Users\86135\Desktop\text\ConsoleApplication1.cpp(694,1): warning C4267: “参数”: 从“size_t”转换到“GLsizei”，可能丢失数据
+C:\Users\86135\Desktop\text\ConsoleApplication1.cpp(752,39): warning C4244: “+=”: 从“double”转换到“float”，可能丢失数据
+C:\Users\86135\Desktop\text\ConsoleApplication1.cpp(753,36): warning C4244: “+=”: 从“double”转换到“float”，可能丢失数据
+C:\Users\86135\Desktop\text\ConsoleApplication1.cpp(756,10): warning C4244: “=”: 从“double”转换到“float”，可能丢失数据
+C:\Users\86135\Desktop\text\ConsoleApplication1.cpp(756,21): warning C4244: “=”: 从“double”转换到“float”，可能丢失数据
+C:\Users\86135\Desktop\text\ConsoleApplication1.cpp(767,11): warning C4244: “=”: 从“double”转换到“float”，可能丢失数据
+C:\Users\86135\Desktop\text\ConsoleApplication1.cpp(767,25): warning C4244: “=”: 从“double”转换到“float”，可能丢失数据
+C:\Users\86135\Desktop\text\ConsoleApplication1.cpp(776,17): warning C4244: “+=”: 从“double”转换到“float”，可能丢失数据
+C:\Users\86135\Desktop\text\ConsoleApplication1.cpp(837,35): warning C4267: “初始化”: 从“size_t”转换到“int”，可能丢失数据
+  ConsoleApplication1.vcxproj -> C:\Users\86135\Desktop\text\x64\Debug\ConsoleApplication1.exe

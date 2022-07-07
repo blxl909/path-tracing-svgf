@@ -10,13 +10,12 @@ out vec3 Normal;
 uniform mat4 view;
 uniform mat4 projection;
 
-
 void main()
 {
 
     vec4 worldPos = vec4(aPos, 1.0);
     gl_Position = projection * view * worldPos;
-
+    
     FragPos = worldPos.xyz; 
     Normal = aNormal;
 

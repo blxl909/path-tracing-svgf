@@ -1,0 +1,3 @@
+C:\Users\86135\Desktop\text\x64\Debug\ConsoleApplication1.exe
+C:\Users\86135\Desktop\text\x64\Debug\ConsoleApplication1.vcxproj.CopyComplete
+C:\Users\86135\Desktop\text\x64\Debug\glfw3.dll

@@ -13,14 +13,22 @@ vec3 tonrMapping(in vec3 c, float limit){
     return c*1.0/(1.0+luminance/limit);
 }
 
+float near = 0.1; 
+float far  = 1000.0; 
+
+float LinearizeDepth(float depth) 
+{
+    float z = depth * 2.0 - 1.0; // back to NDC 
+    return (2.0 * near * far) / (far + near - z * (far - near));    
+}
 
 void  main(){
     vec3 color=texture2D(texPass0,pix.xy*0.5+0.5).rgb;
-    //color=tonrMapping(color,1.5);
-    //color=pow(color,vec3(1.0/2.2));
-    vec4 tmpcolor=texture2D(texPass1,pix.xy*0.5+0.5).rgba;
+    color=tonrMapping(color,1.5);
+    color=pow(color,vec3(1.0/2.2));
+    //vec4 tmpcolor=texture2D(texPass1,pix.xy*0.5+0.5).rgba;
 
-    
+    //color.a=LinearizeDepth(color.a);
     fragColor=vec4(color.rgb,1.0);
 
 
