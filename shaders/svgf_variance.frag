@@ -147,7 +147,11 @@ void  main(){
 		}
 	}
 
-    sum_weight_direct   = max(sum_weight_direct,   1e-6f);
+    //sum_weight_direct   = max(sum_weight_direct,   1e-6f);
+	if(sum_weight_direct<1e-6f){
+		gl_FragData[0]=center_colour_direct;
+		return;
+	}
 	sum_colour_direct   /= sum_weight_direct;
     sum_moment /= sum_weight_direct;
     float variance_direct   = max(0.0f, sum_moment.y - sum_moment.x * sum_moment.x);

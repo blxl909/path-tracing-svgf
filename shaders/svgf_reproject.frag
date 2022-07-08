@@ -69,6 +69,13 @@ void main(){
 
 	vec4 worldPos=texture2D(texPass2,uv).rgba;
     vec4 pre_worldPos=pre_viewproj*worldPos;
+	if(pre_worldPos.w==0.0f){
+		gl_FragData[0]=direct;
+		vec4 history = texture2D(lastMomentHistory,uv).rgba;
+		float variance_direct   = max(0.0f, moment.y - moment.x * moment.x);
+        gl_FragData[1]=vec4(variance_direct,1,history.zw);
+		return;
+	}
     pre_worldPos/=pre_worldPos.w;
     vec2 pre_uv=pre_worldPos.xy*0.5+0.5;
 
@@ -134,7 +141,7 @@ void main(){
 			for (int i = 0; i < 2; i++) {
 				int tap = i + j * 2;
 
-				if (weights[tap] > 0.0f) {
+				if (weights[tap] > 0.001f) {
 					int tap_x = x_prev + i;
 					int tap_y = y_prev + j;
                     vec2 tap_uv=vec2(tap_x/float(screen_width),tap_y/float(screen_height));
@@ -172,7 +179,7 @@ void main(){
 		prev_moment   /= consistent_weights_sum;
 
 		float history = texture2D(lastMomentHistory,uv).g+1.0f; // Increase History Length by 1 step
-
+		history=clamp(history,1.0f,64.0f);
 		float inv_history = 1.0f / history;
         //暂时固定
 		float alpha_colour = max(0.2f, inv_history);
@@ -191,6 +198,7 @@ void main(){
 	} else {
         gl_FragData[1]=vec4(0.0,1.0,moment);
 	}
+	
     gl_FragData[0]=vec4(direct);
 
     

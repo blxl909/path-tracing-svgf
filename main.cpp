@@ -8,6 +8,7 @@ void scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
 
 GLuint init_normal_depth;
 GLuint init_world_position;
+GLuint init_velocity;
 
 GLuint reprojectedColor;
 GLuint reprojectedmomenthistory;
@@ -24,9 +25,12 @@ GLuint tmp_atrous_result;
 
 GLuint next_frame_color_input;//same as lastColor 
 
-GLuint lastColor;
+GLuint taa_output;
+
+GLuint lastColor;//atrous 的一级输出
 GLuint lastNormalDepth;
 GLuint lastMomentHistory;
+GLuint last_color_taa;
 
 RenderPass pass1;
 RenderPass pass2;
@@ -35,6 +39,7 @@ RenderPass pass_Atrous_filter;//save info pass
 RenderPass bilt_pass;
 RenderPass save_next_frame_pass;
 RenderPass pass_pre_info;
+RenderPass pass_taa;
 RenderPass pass3;
 NormalRenderPass init_pass;
 
@@ -186,7 +191,7 @@ int main(int argc, char** argv)
 	hdrCache = getTextureRGB32F(hdrRes.width, hdrRes.height);
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB32F, hdrRes.width, hdrRes.height, 0, GL_RGB, GL_FLOAT, cache);
 	hdrResolution = hdrRes.width;
-
+//-----------------------
 
 	pass3.program = getShaderProgram("./shaders/pass3.frag", "./shaders/vshader.vsh");
 	pass3.bindData(true);
@@ -195,10 +200,16 @@ int main(int argc, char** argv)
 
 	init_normal_depth = getTextureRGB32F(init_pass.width, init_pass.height);
 	init_world_position = getTextureRGB32F(init_pass.width, init_pass.height);
+	init_velocity = getTextureRGB32F(init_pass.width, init_pass.height);
 
 	init_pass.colorAttachments.push_back(init_world_position);
 	init_pass.colorAttachments.push_back(init_normal_depth);
+	init_pass.colorAttachments.push_back(init_velocity);
 	
+	glUseProgram(init_pass.program);
+	glUniform1i(glGetUniformLocation(init_pass.program, "screen_width"), SCR_WIDTH);
+	glUniform1i(glGetUniformLocation(init_pass.program, "screen_height"), SCR_HEIGHT);
+	glUseProgram(0);
 
 	init_pass.bindData(vertices);
 
@@ -273,14 +284,27 @@ int main(int argc, char** argv)
 	next_frame_color_input = getTextureRGB32F(save_next_frame_pass.width, save_next_frame_pass.height);
 	save_next_frame_pass.colorAttachments.push_back(next_frame_color_input);
 	save_next_frame_pass.bindData(false);
+
+//----------------------------
+	pass_taa.program = getShaderProgram("./shaders/taa.frag", "./shaders/vshader.vsh");
+	taa_output = getTextureRGB32F(pass_taa.width, pass_taa.height);
+	pass_taa.colorAttachments.push_back(taa_output);
+	pass_taa.bindData(false);
+
+	glUseProgram(pass_taa.program);
+	glUniform1i(glGetUniformLocation(pass_taa.program, "screen_width"), SCR_WIDTH);
+	glUniform1i(glGetUniformLocation(pass_taa.program, "screen_height"), SCR_HEIGHT);
+	glUseProgram(0);
 //----------------------------
 	pass_pre_info.program = getShaderProgram("./shaders/passlastframe.frag", "./shaders/vshader.vsh");
 	lastColor = getTextureRGB32F(pass_pre_info.width, pass_pre_info.height);
 	lastNormalDepth = getTextureRGB32F(pass_pre_info.width, pass_pre_info.height);
 	lastMomentHistory = getTextureRGB32F(pass_pre_info.width, pass_pre_info.height);
+	last_color_taa = getTextureRGB32F(pass_pre_info.width, pass_pre_info.height);
 	pass_pre_info.colorAttachments.push_back(lastColor);
 	pass_pre_info.colorAttachments.push_back(lastNormalDepth);
 	pass_pre_info.colorAttachments.push_back(lastMomentHistory);
+	pass_pre_info.colorAttachments.push_back(last_color_taa);
 
 	pass_pre_info.bindData(false);
 //----------------------------
@@ -292,6 +316,9 @@ int main(int argc, char** argv)
 		float currentFrame = static_cast<float>(glfwGetTime());
 		deltaTime = currentFrame - lastFrame;
 		lastFrame = currentFrame;
+		float fps = 1.0 / deltaTime;
+		std::cout << "\r";
+		std::cout << std::fixed << std::setprecision(2) << "FPS : " << fps << "    迭代次数: " << frameCounter;
 
 		vec3 eye = vec3(-sin(radians(rotatAngle)) * cos(radians(upAngle)), sin(radians(upAngle)), cos(radians(rotatAngle)) * cos(radians(upAngle)));
 		eye.x *= r_dis; eye.y *= r_dis; eye.z *= r_dis;
@@ -305,14 +332,15 @@ int main(int argc, char** argv)
 		glUseProgram(init_pass.program);
 		glUniformMatrix4fv(glGetUniformLocation(init_pass.program, "view"), 1, GL_FALSE, value_ptr(view));
 		glUniformMatrix4fv(glGetUniformLocation(init_pass.program, "projection"), 1, GL_FALSE, value_ptr(projection));
-
+		glUniformMatrix4fv(glGetUniformLocation(init_pass.program, "pre_viewproj"), 1, GL_FALSE, value_ptr(pre_viewproj));
+		glUniform1ui(glGetUniformLocation(init_pass.program, "frameCounter"), frameCounter++);
 		init_pass.draw();
 //-------------------------------------------
 		cameraRotate = inverse(cameraRotate);
 		glUseProgram(pass1.program);
 		glUniform3fv(glGetUniformLocation(pass1.program, "eye"), 1, value_ptr(eye));
 		glUniformMatrix4fv(glGetUniformLocation(pass1.program, "cameraRotate"), 1, GL_FALSE, value_ptr(cameraRotate));
-		glUniform1ui(glGetUniformLocation(pass1.program, "frameCounter"), frameCounter++);  // 传计数器用作随机种子
+		glUniform1ui(glGetUniformLocation(pass1.program, "frameCounter"), frameCounter);  // 传计数器用作随机种子
 		glUniform1i(glGetUniformLocation(pass1.program, "hdrResolution"), hdrResolution);   // hdf 分辨率
 
 		glActiveTexture(GL_TEXTURE0);
@@ -355,7 +383,7 @@ int main(int argc, char** argv)
 		glUniform1i(glGetUniformLocation(pass2.program, "lastNormalDepth"), 3);
 
 		glActiveTexture(GL_TEXTURE4);
-		glBindTexture(GL_TEXTURE_2D, lastColor);
+		glBindTexture(GL_TEXTURE_2D, next_frame_color_input);
 		glUniform1i(glGetUniformLocation(pass2.program, "lastColor"), 4);
 
 		glActiveTexture(GL_TEXTURE5);
@@ -435,6 +463,25 @@ int main(int argc, char** argv)
 
 		}
 //-------------------------------
+		glUseProgram(pass_taa.program);
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_2D, atrous_flitered_color0);
+		glUniform1i(glGetUniformLocation(pass_taa.program, "currentColor"), 0);
+
+		glActiveTexture(GL_TEXTURE1);
+		glBindTexture(GL_TEXTURE_2D, last_color_taa);
+		glUniform1i(glGetUniformLocation(pass_taa.program, "previousColor"), 1);
+
+		glActiveTexture(GL_TEXTURE2);
+		glBindTexture(GL_TEXTURE_2D, init_velocity);
+		glUniform1i(glGetUniformLocation(pass_taa.program, "velocityTexture"), 2);
+
+		glActiveTexture(GL_TEXTURE3);
+		glBindTexture(GL_TEXTURE_2D, init_normal_depth);
+		glUniform1i(glGetUniformLocation(pass_taa.program, "normal_depth"), 3);
+
+		pass_taa.draw();
+//-------------------------------
 		glUseProgram(pass_pre_info.program);
 		glActiveTexture(GL_TEXTURE0);
 		glBindTexture(GL_TEXTURE_2D, next_frame_color_input);
@@ -448,6 +495,10 @@ int main(int argc, char** argv)
 		glBindTexture(GL_TEXTURE_2D, reprojectedmomenthistory);
 		glUniform1i(glGetUniformLocation(pass_pre_info.program, "texPass2"), 2);
 
+		glActiveTexture(GL_TEXTURE3);
+		glBindTexture(GL_TEXTURE_2D, taa_output);
+		glUniform1i(glGetUniformLocation(pass_pre_info.program, "taa"), 3);
+
 		pass_pre_info.draw();
 
 //-------------------------------
@@ -456,7 +507,7 @@ int main(int argc, char** argv)
 
 
 		glActiveTexture(GL_TEXTURE0);
-		glBindTexture(GL_TEXTURE_2D, atrous_flitered_color0);
+		glBindTexture(GL_TEXTURE_2D, taa_output);
 		glUniform1i(glGetUniformLocation(pass3.program, "texPass0"), 0);
 
 		pass3.draw();
