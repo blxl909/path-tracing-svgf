@@ -128,7 +128,7 @@ void main(){
         return;
     }
 
-    // 鍛ㄥ洿3x3鍐呰窛绂绘渶杩戠殑閫熷害鍚戦噺
+    // 周围3x3内距离最近的速度向量
     vec2 velocity = texture(velocityTexture, getClosestOffset()).rg;
     vec2 offsetUV = clamp(screenPosition - velocity, 0, 1);
     vec3 preColor = texture(previousColor, offsetUV).rgb;

@@ -106,7 +106,7 @@ void  main(){
 
 
     //|| uv.x > (1.0f - inv_screen_width) || uv.y > (1.0f - inv_screen_height)
-    if (center_depth == INF ){
+    if (center_depth == 0.0f ){
         
         gl_FragData[0]=center_colour_direct;
         

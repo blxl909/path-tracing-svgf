@@ -88,7 +88,7 @@ void  main(){
     vec3 center_normal = center_normal_and_depth.xyz;
     float center_depth = center_normal_and_depth.a;
 
-    if (center_depth<0.001f|| center_depth == INF) {
+    if (center_depth == 0.0f) {
 		gl_FragData[0] = center_colour_direct;
 		gl_FragData[0].w = moment_history.r;
 		return;
@@ -147,11 +147,7 @@ void  main(){
 		}
 	}
 
-    //sum_weight_direct   = max(sum_weight_direct,   1e-6f);
-	if(sum_weight_direct<1e-6f){
-		gl_FragData[0]=center_colour_direct;
-		return;
-	}
+    sum_weight_direct   = max(sum_weight_direct,   1e-6f);
 	sum_colour_direct   /= sum_weight_direct;
     sum_moment /= sum_weight_direct;
     float variance_direct   = max(0.0f, sum_moment.y - sum_moment.x * sum_moment.x);
