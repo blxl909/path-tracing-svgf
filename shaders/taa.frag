@@ -18,10 +18,10 @@ vec2 getClosestOffset()
     float closestDepth = 1.0f;
     vec2 screenPosition = pix.xy*0.5+0.5;
     vec2 closestUV = screenPosition;
-
-    for(int i=-1;i<=1;++i)
+    int radis=1;
+    for(int i=-radis;i<=radis;++i)
     {
-        for(int j=-1;j<=1;++j)
+        for(int j=-radis;j<=radis;++j)
         {
             vec2 newUV = screenPosition + deltaRes * vec2(i, j);
 
@@ -84,9 +84,10 @@ vec3 clipAABB(vec3 nowColor, vec3 preColor)
     vec3 m1 = vec3(0), m2 = vec3(0);
 
     vec2 screenPosition = pix.xy*0.5+0.5;
-    for(int i=-1;i<=1;++i)
+    int radis=1;
+    for(int i=-radis;i<=radis;++i)
     {
-        for(int j=-1;j<=1;++j)
+        for(int j=-radis;j<=radis;++j)
         {
             
             vec2 newUV = screenPosition + deltaRes * vec2(i, j);
@@ -125,6 +126,7 @@ void main(){
     if(frameCounter == 0u)
     {
         outColor = vec4(nowColor, 1.0);
+        
         return;
     }
 
@@ -141,8 +143,8 @@ void main(){
     preColor = UnToneMap(YCoCgR2RGB(preColor));
     nowColor = UnToneMap(YCoCgR2RGB(nowColor));
 
-    float c = 0.05;
+    float c = 0.05f;
     outColor = vec4(c * nowColor + (1-c) * preColor, 1.0);
-
+    
 
 }

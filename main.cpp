@@ -393,6 +393,10 @@ int main(int argc, char** argv)
 		glBindTexture(GL_TEXTURE_2D, lastMomentHistory);
 		glUniform1i(glGetUniformLocation(pass2.program, "lastMomentHistory"), 5);
 
+		/*glActiveTexture(GL_TEXTURE6);
+		glBindTexture(GL_TEXTURE_2D, init_velocity);
+		glUniform1i(glGetUniformLocation(pass2.program, "velocity"), 6);*/
+
 		//mat4 inv_viewproj=inverse(inverse(cameraRotate)*camera.perspective_mat);
 		//glUniformMatrix4fv(glGetUniformLocation(pass2.program, "viewproj"), 1, GL_FALSE, value_ptr(cameraRotate));
 		glUniformMatrix4fv(glGetUniformLocation(pass2.program, "pre_viewproj"), 1, GL_FALSE, value_ptr(pre_viewproj));
@@ -466,25 +470,6 @@ int main(int argc, char** argv)
 
 		}
 //-------------------------------
-		glUseProgram(pass_pre_info.program);
-		glActiveTexture(GL_TEXTURE0);
-		glBindTexture(GL_TEXTURE_2D, next_frame_color_input);
-		glUniform1i(glGetUniformLocation(pass_pre_info.program, "texPass0"), 0);
-
-		glActiveTexture(GL_TEXTURE1);
-		glBindTexture(GL_TEXTURE_2D, init_normal_depth);
-		glUniform1i(glGetUniformLocation(pass_pre_info.program, "texPass1"), 1);
-
-		glActiveTexture(GL_TEXTURE2);
-		glBindTexture(GL_TEXTURE_2D, reprojectedmomenthistory);
-		glUniform1i(glGetUniformLocation(pass_pre_info.program, "texPass2"), 2);
-
-		glActiveTexture(GL_TEXTURE3);
-		glBindTexture(GL_TEXTURE_2D, taa_output);
-		glUniform1i(glGetUniformLocation(pass_pre_info.program, "curTAAoutput"), 3);
-
-		pass_pre_info.draw();
-//-------------------------------
 		glUseProgram(pass_taa.program);
 		glActiveTexture(GL_TEXTURE0);
 		glBindTexture(GL_TEXTURE_2D, atrous_flitered_color0);
@@ -504,12 +489,32 @@ int main(int argc, char** argv)
 
 		pass_taa.draw();
 //-------------------------------
+		glUseProgram(pass_pre_info.program);
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_2D, next_frame_color_input);
+		glUniform1i(glGetUniformLocation(pass_pre_info.program, "texPass0"), 0);
+
+		glActiveTexture(GL_TEXTURE1);
+		glBindTexture(GL_TEXTURE_2D, init_normal_depth);
+		glUniform1i(glGetUniformLocation(pass_pre_info.program, "texPass1"), 1);
+
+		glActiveTexture(GL_TEXTURE2);
+		glBindTexture(GL_TEXTURE_2D, reprojectedmomenthistory);
+		glUniform1i(glGetUniformLocation(pass_pre_info.program, "texPass2"), 2);
+
+		glActiveTexture(GL_TEXTURE3);
+		glBindTexture(GL_TEXTURE_2D, taa_output);
+		glUniform1i(glGetUniformLocation(pass_pre_info.program, "curTAAoutput"), 3);
+
+		pass_pre_info.draw();
+
+//-------------------------------
 
 		glUseProgram(pass3.program);
 
-
+		//重影问题和速度有关吗?
 		glActiveTexture(GL_TEXTURE0);
-		glBindTexture(GL_TEXTURE_2D, taa_output);
+		glBindTexture(GL_TEXTURE_2D, atrous_flitered_color0);
 		glUniform1i(glGetUniformLocation(pass3.program, "texPass0"), 0);
 
 		pass3.draw();

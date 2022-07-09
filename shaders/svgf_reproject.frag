@@ -19,6 +19,8 @@ uniform sampler2D texPass2;//world pos
 uniform sampler2D lastNormalDepth;//cpu端还未设置
 uniform sampler2D lastColor;//cpu端还未设置
 uniform sampler2D lastMomentHistory;//x 方差 、 y history、 z 一阶矩 w 二阶矩
+//uniform sampler2D velocity;
+
 uniform int screen_width;//resolution width
 uniform int screen_height;//resolution wheight
 uniform mat4 pre_viewproj;
@@ -34,8 +36,8 @@ bool is_tap_consistent(int x, int y,vec3 curnormal,float curdepth){
     vec3 prev_normal=prev_normal_and_depth.xyz;
     float prev_depth=prev_normal_and_depth.w;
 
-    const float THRESHOLD_NORMAL = 0.8f;//0.95
-	const float THRESHOLD_DEPTH  = 0.5f;//2
+    const float THRESHOLD_NORMAL = 0.95f;//0.95
+	const float THRESHOLD_DEPTH  = 0.05f;//2
 
     bool consistent_normal = dot(curnormal, prev_normal)  > THRESHOLD_NORMAL;
 	bool consistent_depth  = abs(curdepth - prev_depth) < THRESHOLD_DEPTH;
@@ -69,7 +71,19 @@ void main(){
 
 	vec4 worldPos=texture2D(texPass2,uv).rgba;
     vec4 pre_worldPos=pre_viewproj*worldPos;
-
+//---------------
+	//vec2 velocity = texture(velocity, getClosestOffset()).rg;
+    //vec2 offsetUV = pix.xy*0.5+0.5 - velocity;
+	//if(offsetUV.x<0||offsetUV.x>1||offsetUV.y<0||offsetUV.y>1){
+		//gl_FragData[0]=direct;
+		//vec4 history = texture2D(lastMomentHistory,uv).rgba;
+		//float variance_direct   = max(0.0f, moment.y - moment.x * moment.x);
+        //gl_FragData[1]=vec4(variance_direct,1,history.zw);
+		//return;
+	//}
+    //vec3 preColor = texture(lastColor, offsetUV).rgb;
+	//pre_worldPos=
+//---------------
 	if(pre_worldPos.w==0.0f){
 		gl_FragData[0]=direct;
 		vec4 history = texture2D(lastMomentHistory,uv).rgba;
