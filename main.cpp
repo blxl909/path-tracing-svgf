@@ -4,7 +4,11 @@
 void cursor_position_callback(GLFWwindow* window, double x, double y);
 void mouse_button_callback(GLFWwindow* window, int button, int action, int mods);
 void scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
-
+void framebuffer_size_callback(GLFWwindow* window, int width, int height);
+static void glfw_error_callback(int error, const char* description)
+{
+	fprintf(stderr, "Glfw Error %d: %s\n", error, description);
+}
 
 GLuint init_normal_depth;
 GLuint init_world_position;
@@ -53,7 +57,7 @@ mat4 pre_viewproj = glm::perspective(glm::radians(90.0f), 1.0f, 0.1f, 1000.0f);
 
 int main(int argc, char** argv)
 {
-
+	const char* glsl_version = "#version 330";
 	glfwInit();
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
@@ -71,11 +75,24 @@ int main(int argc, char** argv)
 	glfwSetMouseButtonCallback(window, mouse_button_callback);
 	glfwSetCursorPosCallback(window, cursor_position_callback);
 	glfwSetScrollCallback(window, scroll_callback);
-	
+	glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
+	glfwSetErrorCallback(glfw_error_callback);
 
+	// Setup Dear ImGui context
+	IMGUI_CHECKVERSION();
+	ImGui::CreateContext();
+	ImGuiIO& io = ImGui::GetIO(); (void)io;
+	//io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
+	//io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
 
-	// tell GLFW to capture our mouse
-	//glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+	// Setup Dear ImGui style
+	ImGui::StyleColorsDark();
+	//ImGui::StyleColorsLight();
+
+	// Setup Platform/Renderer backends
+	ImGui_ImplGlfw_InitForOpenGL(window, true);
+	ImGui_ImplOpenGL3_Init(glsl_version);
+
 
 	// glad: load all OpenGL function pointers
 	// ---------------------------------------
@@ -308,7 +325,9 @@ int main(int argc, char** argv)
 
 	pass_pre_info.bindData(false);
 //----------------------------
-
+	bool path_tracing_pic_1spp = false;
+	bool svgf_reprojected_pic = false;
+	bool final_pic = true;
 	while (!glfwWindowShouldClose(window))
 	{
 		// per-frame time logic
@@ -329,6 +348,50 @@ int main(int argc, char** argv)
 
 		glm::mat4 view = cameraRotate;
 		glm::mat4 projection = glm::perspective(glm::radians(90.0f), 1.0f, 0.1f, 1000.0f);
+
+		ImGui_ImplOpenGL3_NewFrame();
+		ImGui_ImplGlfw_NewFrame();
+		ImGui::NewFrame();
+
+		
+
+		{
+			static float f = 0.0f;
+			static int counter = 0;
+
+			ImGui::Begin("show pass image");                          // Create a window called "Hello, world!" and append into it.
+
+			ImGui::Text("pick a pass to show the output.");               // Display some text (you can use a format strings too)
+			if (ImGui::Checkbox("path_tracing_pic_1spp", &path_tracing_pic_1spp)) {
+				path_tracing_pic_1spp = true;
+				svgf_reprojected_pic = false;
+				final_pic = false;
+			}
+			if (ImGui::Checkbox("svgf_reprojected_pic", &svgf_reprojected_pic)) {
+				path_tracing_pic_1spp = false;
+				svgf_reprojected_pic = true;
+				final_pic = false;
+			}
+			if (ImGui::Checkbox("final_pic", &final_pic)) {
+				path_tracing_pic_1spp = false;
+				svgf_reprojected_pic = false;
+				final_pic = true;
+			}
+
+			//ImGui::SliderFloat("float", &f, 0.0f, 1.0f);            // Edit 1 float using a slider from 0.0f to 1.0f
+			//ImGui::ColorEdit3("clear color", (float*)&clear_color); // Edit 3 floats representing a color
+
+			//if (ImGui::Button("Button"))                            // Buttons return true when clicked (most widgets return true when edited/activated)
+			//	counter++;
+			//ImGui::SameLine();
+			//ImGui::Text("counter = %d", counter);
+
+			ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
+			ImGui::End();
+		}
+
+		
+
 
 		glUseProgram(init_pass.program);
 		glUniformMatrix4fv(glGetUniformLocation(init_pass.program, "view"), 1, GL_FALSE, value_ptr(view));
@@ -511,19 +574,46 @@ int main(int argc, char** argv)
 //-------------------------------
 
 		glUseProgram(pass3.program);
-
-		//重影问题和速度有关吗?
-		glActiveTexture(GL_TEXTURE0);
-		glBindTexture(GL_TEXTURE_2D, atrous_flitered_color0);
-		glUniform1i(glGetUniformLocation(pass3.program, "texPass0"), 0);
+		if (path_tracing_pic_1spp) {
+			glActiveTexture(GL_TEXTURE0);
+			glBindTexture(GL_TEXTURE_2D, curColor);
+			glUniform1i(glGetUniformLocation(pass3.program, "texPass0"), 0);
+		}
+		else if (svgf_reprojected_pic) {
+			glActiveTexture(GL_TEXTURE0);
+			glBindTexture(GL_TEXTURE_2D, reprojectedColor);
+			glUniform1i(glGetUniformLocation(pass3.program, "texPass0"), 0);
+		}
+		else if (final_pic) {
+			glActiveTexture(GL_TEXTURE0);
+			glBindTexture(GL_TEXTURE_2D, taa_output);
+			glUniform1i(glGetUniformLocation(pass3.program, "texPass0"), 0);
+		}
+		else {
+			glActiveTexture(GL_TEXTURE0);
+			glBindTexture(GL_TEXTURE_2D, taa_output);
+			glUniform1i(glGetUniformLocation(pass3.program, "texPass0"), 0);
+		}
+			
+		
+		
+		
 
 		pass3.draw();
 //--------------------------------
+		ImGui::Render();
+		ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+
+
 		glfwSwapBuffers(window);
 		glfwPollEvents();
 		cameraRotate = inverse(cameraRotate);
 		pre_viewproj = projection * cameraRotate;
 	}
+
+	ImGui_ImplOpenGL3_Shutdown();
+	ImGui_ImplGlfw_Shutdown();
+	ImGui::DestroyContext();
 
 	glfwTerminate();
 	return 0;
@@ -531,35 +621,51 @@ int main(int argc, char** argv)
 }
 
 void cursor_position_callback(GLFWwindow* window, double x, double y) {
-	int state = glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT);
-	if (state == GLFW_PRESS) {
-		frameCounter = 0;
+	ImGuiIO& io = ImGui::GetIO();
+	if (!io.WantCaptureMouse) {
+		int state = glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT);
+		if (state == GLFW_PRESS) {
+			frameCounter = 0;
 
-		// 调整旋转
-		rotatAngle += 150 * (x - lastX) / 512;
-		upAngle += 150 * (y - lastY) / 512;
-		upAngle = glm::min(upAngle, 89.0f);
-		upAngle = glm::max(upAngle, -89.0f);
-		lastX = x, lastY = y;
+			// 调整旋转
+			rotatAngle += 150 * (x - lastX) / 512;
+			upAngle += 150 * (y - lastY) / 512;
+			upAngle = glm::min(upAngle, 89.0f);
+			upAngle = glm::max(upAngle, -89.0f);
+			lastX = x, lastY = y;
+		}
 	}
-	
 }
 
 
 
 void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
 {
-	if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_PRESS) {
-		double xpos, ypos;
-		glfwGetCursorPos(window, &xpos, &ypos);
-		lastX = xpos, lastY = ypos;
+	ImGuiIO& io = ImGui::GetIO();
+	if (!io.WantCaptureMouse) {
+		if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_PRESS) {
+			double xpos, ypos;
+			glfwGetCursorPos(window, &xpos, &ypos);
+			lastX = xpos, lastY = ypos;
+		}
 	}
-
 }
 
 void scroll_callback(GLFWwindow* window, double xoffset, double yoffset)
 {
-	frameCounter = 0;
-	int dir = yoffset > 0 ? 1 : -1;
-	r_dis += -dir * 0.5;
+	ImGuiIO& io = ImGui::GetIO();
+	if (!io.WantCaptureMouse) {
+		frameCounter = 0;
+		int dir = yoffset > 0 ? 1 : -1;
+		r_dis += -dir * 0.5;
+	}
 }
+
+void framebuffer_size_callback(GLFWwindow* window, int width, int height)
+{
+	// make sure the viewport matches the new window dimensions; note that width and 
+	// height will be significantly larger than specified on retina displays.
+	glViewport(0, 0, width, height);
+}
+
+

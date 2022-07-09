@@ -1,4 +1,8 @@
 #pragma once
+#include "imgui/imgui.h"
+#include "imgui/imgui_impl_glfw.h"
+#include "imgui/imgui_impl_opengl3.h"
+
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 
@@ -17,6 +21,8 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
+
+
 
 #include "lib/hdrloader.h"
 
@@ -46,6 +52,32 @@ float lastFrame = 0.0f;
 float lastX = (float)SCR_WIDTH / 2.0;
 float lastY = (float)SCR_HEIGHT / 2.0;
 bool firstMouse = true;
+
+//static class Imgui_config {
+//public:
+//	bool path_tracing_pic = false;
+//	bool svgf_reproject_pic = false;
+//	bool svgf_variance_pic = false;
+//	bool svgf_Atrous_filter_pic = false;
+//	bool taa_pic = false;
+//	bool final_pic = true;
+//	std::vector<bool> container;
+//	Imgui_config() {
+//		container.push_back(path_tracing_pic);
+//		container.push_back(svgf_reproject_pic);
+//		container.push_back(svgf_variance_pic);
+//		container.push_back(svgf_Atrous_filter_pic);
+//		container.push_back(taa_pic);
+//		container.push_back(final_pic);
+//	}
+//	void updateStatus(bool pic_name) {
+//		for (int i = 0; i < container.size(); i++) {
+//			container[i] = false;
+//		}
+//		pic_name = true;
+//	}
+//};
+
 
 // 物体表面材质定义
 struct Material {
