@@ -7,8 +7,6 @@
 #include <GLFW/glfw3.h>
 
 #include <iostream>
-
-#include <iostream>
 #include <iomanip>
 #include <string>
 #include <fstream>
@@ -25,6 +23,8 @@
 
 
 #include "lib/hdrloader.h"
+#include "lib/stb_image.h"
+#include "lib/filesystem.h"
 
 #define INF 114514.0
 
@@ -53,30 +53,6 @@ float lastX = (float)SCR_WIDTH / 2.0;
 float lastY = (float)SCR_HEIGHT / 2.0;
 bool firstMouse = true;
 
-//static class Imgui_config {
-//public:
-//	bool path_tracing_pic = false;
-//	bool svgf_reproject_pic = false;
-//	bool svgf_variance_pic = false;
-//	bool svgf_Atrous_filter_pic = false;
-//	bool taa_pic = false;
-//	bool final_pic = true;
-//	std::vector<bool> container;
-//	Imgui_config() {
-//		container.push_back(path_tracing_pic);
-//		container.push_back(svgf_reproject_pic);
-//		container.push_back(svgf_variance_pic);
-//		container.push_back(svgf_Atrous_filter_pic);
-//		container.push_back(taa_pic);
-//		container.push_back(final_pic);
-//	}
-//	void updateStatus(bool pic_name) {
-//		for (int i = 0; i < container.size(); i++) {
-//			container[i] = false;
-//		}
-//		pic_name = true;
-//	}
-//};
 
 
 // 物体表面材质定义
@@ -101,7 +77,9 @@ struct Material {
 struct Triangle {
 	vec3 p1, p2, p3;    // 顶点坐标
 	vec3 n1, n2, n3;    // 顶点法线
+	vec2 uv1, uv2, uv3; // uv坐标
 	Material material;  // 材质
+	int objID;
 };
 
 // BVH 树节点
@@ -122,6 +100,9 @@ struct Triangle_encoded {
 	vec3 param2;        // (specularTint, roughness, anisotropic)
 	vec3 param3;        // (sheen, sheenTint, clearcoat)
 	vec3 param4;        // (clearcoatGloss, IOR, transmission)
+	vec3 uvPacked1;     
+	vec3 uvPacked2;
+	vec3 objIndex;     //obj index存储在第一个位置，其他两个没用
 };
 
 struct BVHNode_encoded {
@@ -230,10 +211,12 @@ mat4 getTransformMatrix(vec3 rotateCtrl, vec3 translateCtrl, vec3 scaleCtrl) {
 }
 
 // 读取 obj  can't read more than one file //to do  yes you know what
-void readObj(std::string filepath, std::vector<float>& verticesout, std::vector<Triangle>& triangles, Material material, mat4 trans, bool smoothNormal) {
+void readObj(std::string filepath, std::vector<float>& verticesout, std::vector<Triangle>& triangles, Material material, mat4 trans, bool smoothNormal,int objIndex) {
 
 	std::vector<vec3> vertices;
 	std::vector<GLint> indices;
+	std::vector<GLint> tex_indices;
+	std::vector<vec2> texcoords;
 
 	// 打开文件流
 	std::ifstream fin(filepath);
@@ -256,6 +239,7 @@ void readObj(std::string filepath, std::vector<float>& verticesout, std::vector<
 		std::istringstream sin(line);   // 以一行的数据作为 string stream 解析并且读取
 		std::string type;
 		GLfloat x, y, z;
+		GLfloat uvx, uvy;
 		int v0, v1, v2;
 		int vn0, vn1, vn2;
 		int vt0, vt1, vt2;
@@ -271,9 +255,15 @@ void readObj(std::string filepath, std::vector<float>& verticesout, std::vector<
 		sin >> type;
 		if (type == "v") {
 			sin >> x >> y >> z;
-			vertices.push_back(vec3(x, y, z));
+			vec3 tmp = vec3(x, y, z);
+			vertices.push_back(tmp);
 			maxx = glm::max(maxx, x); maxy = glm::max(maxx, y); maxz = glm::max(maxx, z);
 			minx = glm::min(minx, x); miny = glm::min(minx, y); minz = glm::min(minx, z);
+		}
+		// index和 坐标是乱的 需要修改
+		if (type == "vt") {
+			sin >> uvx >> uvy;//currently only support 2d texture coordinate
+			texcoords.push_back(vec2(uvx, uvy));
 		}
 		if (type == "f") {
 			if (slashCnt == 6) {
@@ -292,6 +282,9 @@ void readObj(std::string filepath, std::vector<float>& verticesout, std::vector<
 			indices.push_back(v0 - 1);
 			indices.push_back(v1 - 1);
 			indices.push_back(v2 - 1);
+			tex_indices.push_back(vt0 - 1);
+			tex_indices.push_back(vt1 - 1);
+			tex_indices.push_back(vt2 - 1);
 		}
 	}
 
@@ -338,6 +331,10 @@ void readObj(std::string filepath, std::vector<float>& verticesout, std::vector<
 		t.p1 = vertices[indices[i]];
 		t.p2 = vertices[indices[i + 1]];
 		t.p3 = vertices[indices[i + 2]];
+		t.uv1 = texcoords[tex_indices[i]];
+		t.uv2 = texcoords[tex_indices[i + 1]];
+		t.uv3 = texcoords[tex_indices[i + 2]];
+		t.objID = objIndex;
 		if (!smoothNormal) {
 			vec3 n = normalize(cross(t.p2 - t.p1, t.p3 - t.p1));
 			t.n1 = n; t.n2 = n; t.n3 = n;
@@ -760,3 +757,21 @@ public:
 		glUseProgram(0);
 	}
 };
+
+void load_texture_to_material_array(std::string img_path, GLint slot) {
+
+	int width, height, nrChannels;
+
+	stbi_set_flip_vertically_on_load(true);
+	unsigned char* data = stbi_load(FileSystem::getPath(img_path).c_str(), &width, &height, &nrChannels, 0);
+	
+	if (data) {
+		glTexSubImage3D(GL_TEXTURE_2D_ARRAY, 0, 0, 0, slot, width, height, 1, GL_RGB, GL_UNSIGNED_BYTE, data);
+	}
+	else
+	{
+		std::cout << "Failed to load texture from " << img_path << std::endl;
+	}
+
+	stbi_image_free(data);
+}

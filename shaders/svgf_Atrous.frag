@@ -1,4 +1,4 @@
-#version 330 core
+#version 450 core
 
 in vec3 pix;//[-1,1]
 
@@ -108,7 +108,7 @@ void  main(){
     //|| uv.x > (1.0f - inv_screen_width) || uv.y > (1.0f - inv_screen_height)
     if (center_depth == 0.0f ){
         
-        gl_FragData[0]=center_colour_direct;
+        fragColor_swapBuffer0=center_colour_direct;
         
         return;
     }
@@ -118,7 +118,7 @@ void  main(){
     float gradient_uv_y=uv.y + inv_screen_height;
     if(gradient_uv_x>1.0f||gradient_uv_y>1.0f){
 
-        gl_FragData[0]=center_colour_direct;
+        fragColor_swapBuffer0=center_colour_direct;
         return;
     }
 
@@ -185,7 +185,7 @@ void  main(){
     
     //some assertion
     if(sum_weight_direct < epsilon){
-        gl_FragData[0]=center_colour_direct;
+        fragColor_swapBuffer0=center_colour_direct;
         return;
     }
     
@@ -198,7 +198,7 @@ void  main(){
 	sum_colour_direct  .w *= inv_sum_weight_direct;
     
 
-   gl_FragData[0]=sum_colour_direct;
+   fragColor_swapBuffer0=sum_colour_direct;
    //gl_FragData[0]=vec4(1/0,1/0,1,1);
     
 

@@ -1,4 +1,4 @@
-#version 330 core
+#version 450 core
 
 in vec3 pix;     //[-1,1]
 layout (location = 0) out vec4 outColor;

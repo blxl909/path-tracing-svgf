@@ -5,10 +5,7 @@ void cursor_position_callback(GLFWwindow* window, double x, double y);
 void mouse_button_callback(GLFWwindow* window, int button, int action, int mods);
 void scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
-static void glfw_error_callback(int error, const char* description)
-{
-	fprintf(stderr, "Glfw Error %d: %s\n", error, description);
-}
+
 
 GLuint init_normal_depth;
 GLuint init_world_position;
@@ -31,6 +28,7 @@ GLuint next_frame_color_input;//same as lastColor
 
 GLuint taa_output;
 
+GLuint last_acc_color;
 GLuint lastColor;//atrous 的一级输出
 GLuint lastNormalDepth;
 GLuint lastMomentHistory;
@@ -50,17 +48,17 @@ NormalRenderPass init_pass;
 
 unsigned int frameCounter = 0;
 float upAngle = 10.0;
-float rotatAngle = 90.0;
+float rotatAngle = 0.0;
 float r_dis = 2.0;
 
 mat4 pre_viewproj = glm::perspective(glm::radians(90.0f), 1.0f, 0.1f, 1000.0f);
 
 int main(int argc, char** argv)
 {
-	const char* glsl_version = "#version 330";
+	const char* glsl_version = "#version 430";
 	glfwInit();
-	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
-	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
+	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 5);
 	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
 	GLFWwindow* window = glfwCreateWindow(SCR_WIDTH, SCR_HEIGHT, "LearnOpenGL", NULL, NULL);
@@ -76,18 +74,19 @@ int main(int argc, char** argv)
 	glfwSetCursorPosCallback(window, cursor_position_callback);
 	glfwSetScrollCallback(window, scroll_callback);
 	glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
-	glfwSetErrorCallback(glfw_error_callback);
+	
+
+
 
 	// Setup Dear ImGui context
 	IMGUI_CHECKVERSION();
 	ImGui::CreateContext();
 	ImGuiIO& io = ImGui::GetIO(); (void)io;
-	//io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
-	//io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
+	
 
 	// Setup Dear ImGui style
 	ImGui::StyleColorsDark();
-	//ImGui::StyleColorsLight();
+	
 
 	// Setup Platform/Renderer backends
 	ImGui_ImplGlfw_InitForOpenGL(window, true);
@@ -109,23 +108,25 @@ int main(int argc, char** argv)
 
 	std::vector<Triangle> triangles;
 
+	int objIndex = 0;
+
 	Material m;
-	m.roughness = 0.5;
-	m.specular = 1.0;//1.0
-	m.metallic = 1.0;//1.0
-	m.clearcoat = 1.0;//1.0
+	m.roughness = -1.0;
+	m.specular = 0.0;//1.0
+	m.metallic = -1.0;//1.0
+	m.clearcoat = 0.0;//1.0
 	m.clearcoatGloss = 0.0;
-	m.baseColor = vec3(1, 0.73, 0.25);
+	m.baseColor = vec3(-1, -1, -1);
 	std::vector<float> vertices;
 	//std::vector<GLuint> indices;
-	readObj("models/teapot.obj", vertices, triangles, m, getTransformMatrix(vec3(0, 0, 0), vec3(0, -0.5, 0), vec3(0.75, 0.75, 0.75)), true);
+	readObj("models/clock.obj", vertices, triangles, m, getTransformMatrix(vec3(0, -20, 0), vec3(0.5, 0, 0), vec3(1, 1, 1)), true, objIndex++);
 
-	m.roughness = 0.01;
-	m.metallic = 0.1;
-	m.specular = 1.0;
-	m.baseColor = vec3(1, 1, 1);
+	m.roughness = -1.0;
+	m.metallic = -1.0;
+	m.specular = 0.0;
+	m.baseColor = vec3(-1, -1, -1);
 	float len = 13000.0;
-	readObj("models/quad.obj", vertices, triangles, m, getTransformMatrix(vec3(0, 0, 0), vec3(0, -0.5, 0), vec3(len, 0.01, len)), false);
+	readObj("models/plant.obj", vertices, triangles, m, getTransformMatrix(vec3(0, 0, 0), vec3(-0.75, -0.5, 0), vec3(2, 2, 2)), false, objIndex++);
 
 	int nTriangles = triangles.size();
 	std::cout << "模型读取完成: 共 " << nTriangles << " 个三角形" << std::endl;
@@ -138,7 +139,7 @@ int main(int argc, char** argv)
 	testNode.AA = vec3(1, 1, 0);
 	testNode.BB = vec3(0, 1, 0);
 	std::vector<BVHNode> nodes{ testNode };
-	//buildBVH(triangles, nodes, 0, triangles.size() - 1, 8);
+	
 	buildBVHwithSAH(triangles, nodes, 0, triangles.size() - 1, 8);
 	int nNodes = nodes.size();
 	std::cout << "BVH 建立完成: 共 " << nNodes << " 个节点" << std::endl;
@@ -163,6 +164,10 @@ int main(int argc, char** argv)
 		triangles_encoded[i].param2 = vec3(m.specularTint, m.roughness, m.anisotropic);
 		triangles_encoded[i].param3 = vec3(m.sheen, m.sheenTint, m.clearcoat);
 		triangles_encoded[i].param4 = vec3(m.clearcoatGloss, m.IOR, m.transmission);
+
+		triangles_encoded[i].uvPacked1 = vec3(t.uv1, t.uv2.x);
+		triangles_encoded[i].uvPacked2 = vec3(t.uv2.y, t.uv3);
+		triangles_encoded[i].objIndex = vec3((float)t.objID, 0.0, 0.0);
 	}
 
 	// 编码 BVHNode, aabb
@@ -209,6 +214,34 @@ int main(int argc, char** argv)
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB32F, hdrRes.width, hdrRes.height, 0, GL_RGB, GL_FLOAT, cache);
 	hdrResolution = hdrRes.width;
 
+//----------------------
+	//load material
+
+	GLuint materials_array;
+	glGenTextures(1, &materials_array);
+	glBindTexture(GL_TEXTURE_2D_ARRAY, materials_array);
+	glGenerateMipmap(GL_TEXTURE_2D_ARRAY);
+	glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+
+	//total 12 textures
+	//hard code width height, maybe change later
+	glTexStorage3D(GL_TEXTURE_2D_ARRAY, 1, GL_RGBA8, 4096, 4096, 12);
+	int slot_index = 0;
+	load_texture_to_material_array("Textures/clock_albedo.bmp", slot_index++);
+	load_texture_to_material_array("Textures/clock_metallic.bmp", slot_index++);
+	load_texture_to_material_array("Textures/clock_normal.bmp", slot_index++);
+	load_texture_to_material_array("Textures/clock_roughness.bmp", slot_index++);
+
+	load_texture_to_material_array("Textures/plant_albedo.bmp", slot_index++);
+	load_texture_to_material_array("Textures/plant_metallic.bmp", slot_index++);
+	load_texture_to_material_array("Textures/plant_normal.bmp", slot_index++);
+	load_texture_to_material_array("Textures/plant_roughness.bmp", slot_index++);
+
+	
+//----------------------
 
 	pass3.program = getShaderProgram("./shaders/pass3.frag", "./shaders/vshader.vsh");
 	pass3.bindData(true);
@@ -317,17 +350,20 @@ int main(int argc, char** argv)
 	lastNormalDepth = getTextureRGB32F(pass_pre_info.width, pass_pre_info.height);
 	lastMomentHistory = getTextureRGB32F(pass_pre_info.width, pass_pre_info.height);
 	last_color_taa = getTextureRGB32F(pass_pre_info.width, pass_pre_info.height);
+	last_acc_color = getTextureRGB32F(pass_pre_info.width, pass_pre_info.height);
 
 	pass_pre_info.colorAttachments.push_back(lastColor);
 	pass_pre_info.colorAttachments.push_back(lastNormalDepth);
 	pass_pre_info.colorAttachments.push_back(lastMomentHistory);
 	pass_pre_info.colorAttachments.push_back(last_color_taa);
+	pass_pre_info.colorAttachments.push_back(last_acc_color);
 
 	pass_pre_info.bindData(false);
 //----------------------------
 	bool path_tracing_pic_1spp = false;
 	bool svgf_reprojected_pic = false;
 	bool final_pic = true;
+	bool accumulate_color = false;
 	while (!glfwWindowShouldClose(window))
 	{
 		// per-frame time logic
@@ -366,17 +402,27 @@ int main(int argc, char** argv)
 				path_tracing_pic_1spp = true;
 				svgf_reprojected_pic = false;
 				final_pic = false;
+				accumulate_color = false;
 			}
 			if (ImGui::Checkbox("svgf_reprojected_pic", &svgf_reprojected_pic)) {
 				path_tracing_pic_1spp = false;
 				svgf_reprojected_pic = true;
 				final_pic = false;
+				accumulate_color = false;
 			}
 			if (ImGui::Checkbox("final_pic", &final_pic)) {
 				path_tracing_pic_1spp = false;
 				svgf_reprojected_pic = false;
 				final_pic = true;
+				accumulate_color = false;
 			}
+			/*if (ImGui::Checkbox("show_accumulate_color", &accumulate_color)) {
+				path_tracing_pic_1spp = false;
+				svgf_reprojected_pic = false;
+				final_pic = false;
+				accumulate_color = true;
+			}*/
+				
 
 			//ImGui::SliderFloat("float", &f, 0.0f, 1.0f);            // Edit 1 float using a slider from 0.0f to 1.0f
 			//ImGui::ColorEdit3("clear color", (float*)&clear_color); // Edit 3 floats representing a color
@@ -417,9 +463,14 @@ int main(int argc, char** argv)
 		glBindTexture(GL_TEXTURE_BUFFER, nodesTextureBuffer);
 		glUniform1i(glGetUniformLocation(pass1.program, "nodes"), 1);
 
-		/*glActiveTexture(GL_TEXTURE2);
-		glBindTexture(GL_TEXTURE_2D, lastColor);
-		glUniform1i(glGetUniformLocation(pass1.program, "lastFrame"), 2);*/
+		/*if (accumulate_color) {
+			glUniform1i(glGetUniformLocation(pass1.program, "accumulate"), accumulate_color);
+
+			glActiveTexture(GL_TEXTURE2);
+			glBindTexture(GL_TEXTURE_2D, last_acc_color);
+			glUniform1i(glGetUniformLocation(pass1.program, "lastFrame"), 2);
+		}*/
+		
 
 		glActiveTexture(GL_TEXTURE3);
 		glBindTexture(GL_TEXTURE_2D, hdrMap);
@@ -428,6 +479,10 @@ int main(int argc, char** argv)
 		glActiveTexture(GL_TEXTURE4);
 		glBindTexture(GL_TEXTURE_2D, hdrCache);
 		glUniform1i(glGetUniformLocation(pass1.program, "hdrCache"), 4);
+
+		glActiveTexture(GL_TEXTURE5);
+		glBindTexture(GL_TEXTURE_2D_ARRAY, materials_array);
+		glUniform1i(glGetUniformLocation(pass1.program, "material_array"), 5);
 
 		pass1.draw();
 //-------------------------------
@@ -569,6 +624,10 @@ int main(int argc, char** argv)
 		glBindTexture(GL_TEXTURE_2D, taa_output);
 		glUniform1i(glGetUniformLocation(pass_pre_info.program, "curTAAoutput"), 3);
 
+		/*glActiveTexture(GL_TEXTURE4);
+		glBindTexture(GL_TEXTURE_2D, curColor);
+		glUniform1i(glGetUniformLocation(pass_pre_info.program, "curAccColor"), 4);*/
+
 		pass_pre_info.draw();
 
 //-------------------------------
@@ -587,6 +646,11 @@ int main(int argc, char** argv)
 		else if (final_pic) {
 			glActiveTexture(GL_TEXTURE0);
 			glBindTexture(GL_TEXTURE_2D, taa_output);
+			glUniform1i(glGetUniformLocation(pass3.program, "texPass0"), 0);
+		}
+		else if(accumulate_color){
+			glActiveTexture(GL_TEXTURE0);
+			glBindTexture(GL_TEXTURE_2D, last_acc_color);
 			glUniform1i(glGetUniformLocation(pass3.program, "texPass0"), 0);
 		}
 		else {

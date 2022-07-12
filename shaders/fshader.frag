@@ -1,4 +1,5 @@
-#version 330 core
+#version 450 core
+#extension GL_EXT_gpu_shader4: enable
 
 in vec3 pix;
 //out vec4 fragColor;
@@ -18,18 +19,22 @@ uniform int hdrResolution;
 uniform samplerBuffer triangles;
 uniform samplerBuffer nodes;
 
+uniform sampler2DArray material_array;
+
 uniform sampler2D lastFrame;
 uniform sampler2D hdrMap;
 uniform sampler2D hdrCache;
 
 uniform vec3 eye;
 uniform mat4 cameraRotate;
+uniform bool use_normal_map;//haven't set in host side
+uniform bool accumulate;//haven't set in host side
 
 // ----------------------------------------------------------------------------- //
 
 #define PI              3.1415926
 #define INF             114514.0
-#define SIZE_TRIANGLE   12
+#define SIZE_TRIANGLE   15  //12 before modify
 #define SIZE_BVHNODE    4
 
 // ----------------------------------------------------------------------------- //
@@ -38,6 +43,8 @@ uniform mat4 cameraRotate;
 struct Triangle {
     vec3 p1, p2, p3;    // 顶点坐标
     vec3 n1, n2, n3;    // 顶点法线
+    vec2 uv1, uv2, uv3;
+    int objIndex;
 };
 
 // BVH 树节点
@@ -82,6 +89,7 @@ struct HitResult {
     vec3 normal;            // 命中点法线
     vec3 viewDir;           // 击中该点的光线的方向
     Material material;      // 命中点的表面材质
+    int objIndex;
 };
 
 // 重要性采样的返回结果
@@ -105,6 +113,15 @@ Triangle getTriangle(int i) {
     t.n1 = texelFetch(triangles, offset + 3).xyz;
     t.n2 = texelFetch(triangles, offset + 4).xyz;
     t.n3 = texelFetch(triangles, offset + 5).xyz;
+
+    vec3 uvPacked1 = texelFetch(triangles, offset + 12).xyz;
+    vec3 uvPacked2 = texelFetch(triangles, offset + 13).xyz;
+    //uv
+    t.uv1 = uvPacked1.xy;
+    t.uv2 = vec2(uvPacked1.z,uvPacked2.x);
+    t.uv3 = uvPacked2.yz;
+    //obj Index
+    t.objIndex = int(texelFetch(triangles, offset + 14).x);
 
     return t;
 }
@@ -237,19 +254,62 @@ float hitAABB(Ray r, vec3 AA, vec3 BB) {
 
 // ----------------------------------------------------------------------------- //
 
+bool under_zero(vec3 color){
+    return color.x<0.0||color.y<0.0||color.z<0.0;
+}
+
+
 // 暴力遍历数组下标范围 [l, r] 求最近交点
 HitResult hitArray(Ray ray, int l, int r) {
     HitResult res;
     res.isHit = false;
     res.distance = INF;
+
+    int nearest_tri_index=-1;
+
     for(int i=l; i<=r; i++) {
         Triangle triangle = getTriangle(i);
         HitResult r = hitTriangle(triangle, ray);
         if(r.isHit && r.distance<res.distance) {
             res = r;
             res.material = getMaterial(i);
+            nearest_tri_index=i;
         }
     }
+//---------------------------
+    if(res.isHit){
+
+        Triangle hit_tri=getTriangle(nearest_tri_index);
+
+        vec3 p1 = hit_tri.p1;
+        vec3 p2 = hit_tri.p2;
+        vec3 p3 = hit_tri.p3;
+        vec3 P = res.hitPoint;
+        //p不是世界空间坐标?
+
+        //应该不需要透视矫正插值 在world空间中仍然保持线性性质
+        float alpha = (-(P.x-p2.x)*(p3.y-p2.y) + (P.y-p2.y)*(p3.x-p2.x)) / (-(p1.x-p2.x)*(p3.y-p2.y) + (p1.y-p2.y)*(p3.x-p2.x)+1e-7);
+        float beta  = (-(P.x-p3.x)*(p1.y-p3.y) + (P.y-p3.y)*(p1.x-p3.x)) / (-(p2.x-p3.x)*(p1.y-p3.y) + (p2.y-p3.y)*(p1.x-p3.x)+1e-7);
+        float gama  = 1.0 - alpha - beta;
+        
+        vec2 smooth_uv=alpha * hit_tri.uv1 + beta * hit_tri.uv2 + gama * hit_tri.uv3;
+
+        int mat_id = hit_tri.objIndex * 4;//albedo  at the first place others +1 +2 to be implement
+        if(under_zero(res.material.baseColor)){
+            res.material.baseColor =  texture2DArray(material_array,vec3(smooth_uv,float(mat_id))).xyz;
+        }
+        if(res.material.metallic<0.0f){
+            res.material.metallic = texture2DArray(material_array,vec3(smooth_uv,float(mat_id+1.0f))).x;//srgb or linear?
+        }
+        if(false/*use_normal_map*/){
+
+        }
+        if(res.material.roughness<0.0f){
+            res.material.roughness = texture2DArray(material_array,vec3(smooth_uv,float(mat_id+3.0f))).x;
+        }
+
+    }
+//--------------------------------------
     return res;
 }
 
@@ -985,15 +1045,21 @@ void main() {
     }
     
     // 和上一帧混合
-    //vec3 lastColor = texture2D(lastFrame, pix.xy*0.5+0.5).rgb;
-    //color = mix(lastColor, color, 1.0/float(frameCounter+1u));
+    //if(accumulate){
+    //    vec3 lastColor = texture2D(lastFrame, pix.xy*0.5+0.5).rgb;
+    //    color = mix(lastColor, color, 1.0/float(frameCounter+1u));
+    //}
+    
 
     // 输出
-    gl_FragData[0] = vec4(color,1.0);
-    gl_FragData[1] = vec4(worldNormal,screenDepth);
-    gl_FragData[2] = vec4(firstHit.hitPoint,1.0);
+    fragColor = vec4(color,1.0);
     
+    //fragColor = vec4(texture2DArray(material_array,vec3(pix.xy*0.5f+0.5f,3.0f)).xyz,1.0);
+
+    worldNormal_screenDepth = vec4(worldNormal,screenDepth);
+    worldPosition = vec4(firstHit.hitPoint,1.0);
     
+
     
 }
 

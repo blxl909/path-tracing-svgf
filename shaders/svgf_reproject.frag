@@ -1,4 +1,4 @@
-#version 330 core
+#version 450 core
 
 in vec3 pix;//[-1,1]
 
@@ -36,8 +36,8 @@ bool is_tap_consistent(int x, int y,vec3 curnormal,float curdepth){
     vec3 prev_normal=prev_normal_and_depth.xyz;
     float prev_depth=prev_normal_and_depth.w;
 
-    const float THRESHOLD_NORMAL = 0.95f;//0.95
-	const float THRESHOLD_DEPTH  = 0.01f;//2
+    const float THRESHOLD_NORMAL = 0.8f;//0.95
+	const float THRESHOLD_DEPTH  = 0.1f;//2
 
     bool consistent_normal = dot(curnormal, prev_normal)  > THRESHOLD_NORMAL;
 	bool consistent_depth  = abs(curdepth - prev_depth) < THRESHOLD_DEPTH;
@@ -85,10 +85,10 @@ void main(){
 	//pre_worldPos=
 //---------------
 	if(pre_worldPos.w==0.0f){
-		gl_FragData[0]=direct;
+		fragColor=direct;
 		vec4 history = texture2D(lastMomentHistory,uv).rgba;
 		float variance_direct   = max(0.0f, moment.y - moment.x * moment.x);
-        gl_FragData[1]=vec4(variance_direct,1,history.zw);
+        moment_History=vec4(variance_direct,1,history.zw);
 		return;
 	}
 
@@ -96,11 +96,11 @@ void main(){
     vec2 pre_uv=pre_worldPos.xy*0.5+0.5;
 
     if( depth==0.0f||pre_uv.x<0||pre_uv.x>1.0||pre_uv.y<0||pre_uv.y>1.0){
-        gl_FragData[0]=direct;
+        fragColor=direct;
 
         vec4 history = texture2D(lastMomentHistory,uv).rgba;
 		float variance_direct   = max(0.0f, moment.y - moment.x * moment.x);
-        gl_FragData[1]=vec4(variance_direct,1,history.zw);
+        moment_History=vec4(variance_direct,1,history.zw);
         return;
     }
     
@@ -208,13 +208,13 @@ void main(){
 
 		float variance_direct   = max(0.0f, moment.y - moment.x * moment.x);
 			
-        gl_FragData[1]=vec4(variance_direct,history,moment);
+        moment_History=vec4(variance_direct,history,moment);
 			
 
 	} else {
-        gl_FragData[1]=vec4(0.0,1.0,moment);
+        moment_History=vec4(0.0,1.0,moment);
 	}
-    gl_FragData[0]=vec4(direct);
+    fragColor=vec4(direct);
 
     
 

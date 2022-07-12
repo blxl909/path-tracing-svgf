@@ -1,4 +1,4 @@
-#version 330 core
+#version 450 core
 // this pass culculate the real variance 
 //the reproject pass only culculate the variance during time
 //but if history is lowwer than 4 ,time variance is untrustable, so we culculate the variance in space
@@ -73,8 +73,8 @@ void  main(){
     float inv_screen_height = 1.0f/screen_height;
 
     if (history >= 4.0f || uv.x > (1.0f - inv_screen_width) || uv.y > (1.0f - inv_screen_height)) {
-        gl_FragData[0] = center_colour_direct;
-		gl_FragData[0].w = moment_history.r;
+        fragColor = center_colour_direct;
+		fragColor.w = moment_history.r;
 		
 		return;
 	}
@@ -89,8 +89,8 @@ void  main(){
     float center_depth = center_normal_and_depth.a;
 
     if (center_depth == 0.0f) {
-		gl_FragData[0] = center_colour_direct;
-		gl_FragData[0].w = moment_history.r;
+		fragColor = center_colour_direct;
+		fragColor.w = moment_history.r;
 		return;
 	}
 
@@ -155,7 +155,7 @@ void  main(){
     //variance_direct*= 4.0 / history;
     sum_colour_direct.w=variance_direct;
 
-    gl_FragData[0]=sum_colour_direct;
+    fragColor=sum_colour_direct;
 	
 
 }
