@@ -34,7 +34,7 @@ GLuint lastNormalDepth;
 GLuint lastMomentHistory;
 GLuint last_color_taa;
 
-RenderPass pass1;
+RenderPass pass_path_tracing;
 RenderPass pass2;
 RenderPass pass_moment_filter;
 RenderPass pass_Atrous_filter;//save info pass
@@ -110,6 +110,7 @@ int main(int argc, char** argv)
 
 	int objIndex = 0;
 
+	// when number is under 0.0, that means we use texture to define it 
 	Material m;
 	m.roughness = -1.0;
 	m.specular = 0.0;//1.0
@@ -126,7 +127,7 @@ int main(int argc, char** argv)
 	m.specular = 0.0;
 	m.baseColor = vec3(-1, -1, -1);
 	float len = 13000.0;
-	readObj("models/plant.obj", vertices, triangles, m, getTransformMatrix(vec3(0, 0, 0), vec3(-0.75, -0.5, 0), vec3(2, 2, 2)), false, objIndex++);
+	//readObj("models/plant.obj", vertices, triangles, m, getTransformMatrix(vec3(0, 0, 0), vec3(-0.75, -0.5, 0), vec3(2, 2, 2)), false, objIndex++);
 
 	int nTriangles = triangles.size();
 	std::cout << "模型读取完成: 共 " << nTriangles << " 个三角形" << std::endl;
@@ -203,7 +204,7 @@ int main(int argc, char** argv)
 
 	// hdr 全景图
 	HDRLoaderResult hdrRes;
-	bool r = HDRLoader::load("./HDR/chinese_garden_2k.hdr", hdrRes);
+	bool r = HDRLoader::load("./HDR/room.hdr", hdrRes);
 	hdrMap = getTextureRGB32F(hdrRes.width, hdrRes.height);
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB32F, hdrRes.width, hdrRes.height, 0, GL_RGB, GL_FLOAT, hdrRes.cols);
 
@@ -264,22 +265,22 @@ int main(int argc, char** argv)
 	glUseProgram(0);
 
 //--------------------
-	pass1.program = getShaderProgram("./shaders/fshader.frag", "./shaders/vshader.vsh");
+	pass_path_tracing.program = getShaderProgram("./shaders/path_tracing.frag", "./shaders/vshader.vsh");
 
-	curColor = getTextureRGB32F(pass1.width, pass1.height);
-	curNormalDepth = getTextureRGB32F(pass1.width, pass1.height);
-	curWorldPos = getTextureRGB32F(pass1.width, pass1.height);
-	pass1.colorAttachments.push_back(curColor);
-	pass1.colorAttachments.push_back(curNormalDepth);
-	pass1.colorAttachments.push_back(curWorldPos);
+	curColor = getTextureRGB32F(pass_path_tracing.width, pass_path_tracing.height);
+	curNormalDepth = getTextureRGB32F(pass_path_tracing.width, pass_path_tracing.height);
+	curWorldPos = getTextureRGB32F(pass_path_tracing.width, pass_path_tracing.height);
+	pass_path_tracing.colorAttachments.push_back(curColor);
+	pass_path_tracing.colorAttachments.push_back(curNormalDepth);
+	pass_path_tracing.colorAttachments.push_back(curWorldPos);
 
-	pass1.bindData(false);
+	pass_path_tracing.bindData(false);
 
-	glUseProgram(pass1.program);
-	glUniform1i(glGetUniformLocation(pass1.program, "nTriangles"), triangles.size());
-	glUniform1i(glGetUniformLocation(pass1.program, "nNodes"), nodes.size());
-	glUniform1i(glGetUniformLocation(pass1.program, "width"), pass1.width);
-	glUniform1i(glGetUniformLocation(pass1.program, "height"), pass1.height);
+	glUseProgram(pass_path_tracing.program);
+	glUniform1i(glGetUniformLocation(pass_path_tracing.program, "nTriangles"), triangles.size());
+	glUniform1i(glGetUniformLocation(pass_path_tracing.program, "nNodes"), nodes.size());
+	glUniform1i(glGetUniformLocation(pass_path_tracing.program, "width"), pass_path_tracing.width);
+	glUniform1i(glGetUniformLocation(pass_path_tracing.program, "height"), pass_path_tracing.height);
 	glUseProgram(0);
 
 //---------------------------------------
@@ -362,8 +363,8 @@ int main(int argc, char** argv)
 //----------------------------
 	bool path_tracing_pic_1spp = false;
 	bool svgf_reprojected_pic = false;
-	bool final_pic = true;
-	bool accumulate_color = false;
+	bool final_pic = false;
+	bool accumulate_color = true;
 	while (!glfwWindowShouldClose(window))
 	{
 		// per-frame time logic
@@ -399,29 +400,33 @@ int main(int argc, char** argv)
 
 			ImGui::Text("pick a pass to show the output.");               // Display some text (you can use a format strings too)
 			if (ImGui::Checkbox("path_tracing_pic_1spp", &path_tracing_pic_1spp)) {
+				frameCounter = 0;
 				path_tracing_pic_1spp = true;
 				svgf_reprojected_pic = false;
 				final_pic = false;
 				accumulate_color = false;
 			}
 			if (ImGui::Checkbox("svgf_reprojected_pic", &svgf_reprojected_pic)) {
+				frameCounter = 0;
 				path_tracing_pic_1spp = false;
 				svgf_reprojected_pic = true;
 				final_pic = false;
 				accumulate_color = false;
 			}
 			if (ImGui::Checkbox("final_pic", &final_pic)) {
+				frameCounter = 0;
 				path_tracing_pic_1spp = false;
 				svgf_reprojected_pic = false;
 				final_pic = true;
 				accumulate_color = false;
 			}
-			/*if (ImGui::Checkbox("show_accumulate_color", &accumulate_color)) {
+			if (ImGui::Checkbox("show_accumulate_color", &accumulate_color)) {
+				frameCounter = 0;
 				path_tracing_pic_1spp = false;
 				svgf_reprojected_pic = false;
 				final_pic = false;
 				accumulate_color = true;
-			}*/
+			}
 				
 
 			//ImGui::SliderFloat("float", &f, 0.0f, 1.0f);            // Edit 1 float using a slider from 0.0f to 1.0f
@@ -449,42 +454,42 @@ int main(int argc, char** argv)
 		init_pass.draw();
 //-------------------------------------------
 		cameraRotate = inverse(cameraRotate);
-		glUseProgram(pass1.program);
-		glUniform3fv(glGetUniformLocation(pass1.program, "eye"), 1, value_ptr(eye));
-		glUniformMatrix4fv(glGetUniformLocation(pass1.program, "cameraRotate"), 1, GL_FALSE, value_ptr(cameraRotate));
-		glUniform1ui(glGetUniformLocation(pass1.program, "frameCounter"), frameCounter);  // 传计数器用作随机种子
-		glUniform1i(glGetUniformLocation(pass1.program, "hdrResolution"), hdrResolution);   // hdf 分辨率
+		glUseProgram(pass_path_tracing.program);
+		glUniform3fv(glGetUniformLocation(pass_path_tracing.program, "eye"), 1, value_ptr(eye));
+		glUniformMatrix4fv(glGetUniformLocation(pass_path_tracing.program, "cameraRotate"), 1, GL_FALSE, value_ptr(cameraRotate));
+		glUniform1ui(glGetUniformLocation(pass_path_tracing.program, "frameCounter"), frameCounter);  // 传计数器用作随机种子
+		glUniform1i(glGetUniformLocation(pass_path_tracing.program, "hdrResolution"), hdrResolution);   // hdf 分辨率
 
 		glActiveTexture(GL_TEXTURE0);
 		glBindTexture(GL_TEXTURE_BUFFER, trianglesTextureBuffer);
-		glUniform1i(glGetUniformLocation(pass1.program, "triangles"), 0);
+		glUniform1i(glGetUniformLocation(pass_path_tracing.program, "triangles"), 0);
 
 		glActiveTexture(GL_TEXTURE1);
 		glBindTexture(GL_TEXTURE_BUFFER, nodesTextureBuffer);
-		glUniform1i(glGetUniformLocation(pass1.program, "nodes"), 1);
+		glUniform1i(glGetUniformLocation(pass_path_tracing.program, "nodes"), 1);
 
-		/*if (accumulate_color) {
-			glUniform1i(glGetUniformLocation(pass1.program, "accumulate"), accumulate_color);
-
+		glUniform1i(glGetUniformLocation(pass_path_tracing.program, "accumulate"), accumulate_color);
+		if (accumulate_color) {
 			glActiveTexture(GL_TEXTURE2);
 			glBindTexture(GL_TEXTURE_2D, last_acc_color);
-			glUniform1i(glGetUniformLocation(pass1.program, "lastFrame"), 2);
-		}*/
+			glUniform1i(glGetUniformLocation(pass_path_tracing.program, "lastFrame"), 2);
+		}
+		
 		
 
 		glActiveTexture(GL_TEXTURE3);
 		glBindTexture(GL_TEXTURE_2D, hdrMap);
-		glUniform1i(glGetUniformLocation(pass1.program, "hdrMap"), 3);
+		glUniform1i(glGetUniformLocation(pass_path_tracing.program, "hdrMap"), 3);
 
 		glActiveTexture(GL_TEXTURE4);
 		glBindTexture(GL_TEXTURE_2D, hdrCache);
-		glUniform1i(glGetUniformLocation(pass1.program, "hdrCache"), 4);
+		glUniform1i(glGetUniformLocation(pass_path_tracing.program, "hdrCache"), 4);
 
 		glActiveTexture(GL_TEXTURE5);
 		glBindTexture(GL_TEXTURE_2D_ARRAY, materials_array);
-		glUniform1i(glGetUniformLocation(pass1.program, "material_array"), 5);
+		glUniform1i(glGetUniformLocation(pass_path_tracing.program, "material_array"), 5);
 
-		pass1.draw();
+		pass_path_tracing.draw();
 //-------------------------------
 		glUseProgram(pass2.program);
 		glActiveTexture(GL_TEXTURE0);
@@ -624,9 +629,9 @@ int main(int argc, char** argv)
 		glBindTexture(GL_TEXTURE_2D, taa_output);
 		glUniform1i(glGetUniformLocation(pass_pre_info.program, "curTAAoutput"), 3);
 
-		/*glActiveTexture(GL_TEXTURE4);
+		glActiveTexture(GL_TEXTURE4);
 		glBindTexture(GL_TEXTURE_2D, curColor);
-		glUniform1i(glGetUniformLocation(pass_pre_info.program, "curAccColor"), 4);*/
+		glUniform1i(glGetUniformLocation(pass_pre_info.program, "curAccColor"), 4);
 
 		pass_pre_info.draw();
 
@@ -658,10 +663,6 @@ int main(int argc, char** argv)
 			glBindTexture(GL_TEXTURE_2D, taa_output);
 			glUniform1i(glGetUniformLocation(pass3.program, "texPass0"), 0);
 		}
-			
-		
-		
-		
 
 		pass3.draw();
 //--------------------------------
