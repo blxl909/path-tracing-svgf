@@ -37,7 +37,7 @@ bool is_tap_consistent(int x, int y,vec3 curnormal,float curdepth){
     float prev_depth=prev_normal_and_depth.w;
 
     const float THRESHOLD_NORMAL = 0.8f;//0.95
-	const float THRESHOLD_DEPTH  = 0.1f;//2
+	const float THRESHOLD_DEPTH  = 0.2f;//2
 
     bool consistent_normal = dot(curnormal, prev_normal)  > THRESHOLD_NORMAL;
 	bool consistent_depth  = abs(curdepth - prev_depth) < THRESHOLD_DEPTH;

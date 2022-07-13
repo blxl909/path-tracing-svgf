@@ -13,7 +13,7 @@ GLuint init_velocity;
 
 GLuint curColor;
 GLuint curNormalDepth;
-GLuint curWorldPos;
+GLuint Albedo;
 
 GLuint reprojectedColor;
 GLuint reprojectedmomenthistory;
@@ -269,10 +269,10 @@ int main(int argc, char** argv)
 
 	curColor = getTextureRGB32F(pass_path_tracing.width, pass_path_tracing.height);
 	curNormalDepth = getTextureRGB32F(pass_path_tracing.width, pass_path_tracing.height);
-	curWorldPos = getTextureRGB32F(pass_path_tracing.width, pass_path_tracing.height);
+	Albedo = getTextureRGB32F(pass_path_tracing.width, pass_path_tracing.height);
 	pass_path_tracing.colorAttachments.push_back(curColor);
 	pass_path_tracing.colorAttachments.push_back(curNormalDepth);
-	pass_path_tracing.colorAttachments.push_back(curWorldPos);
+	pass_path_tracing.colorAttachments.push_back(Albedo);
 
 	pass_path_tracing.bindData(false);
 
@@ -464,6 +464,8 @@ int main(int argc, char** argv)
 		glUniform1ui(glGetUniformLocation(pass_path_tracing.program, "frameCounter"), frameCounter);  // 传计数器用作随机种子
 		glUniform1i(glGetUniformLocation(pass_path_tracing.program, "hdrResolution"), hdrResolution);   // hdf 分辨率
 		glUniform1i(glGetUniformLocation(pass_path_tracing.program, "use_normal_map"), use_normal_texture);
+		//cur hard code it ,set tbo later
+		glUniform1i(glGetUniformLocation(pass_path_tracing.program, "pointLightSize"), 0);
 
 		glActiveTexture(GL_TEXTURE0);
 		glBindTexture(GL_TEXTURE_BUFFER, trianglesTextureBuffer);
@@ -660,8 +662,19 @@ int main(int argc, char** argv)
 		}
 		else if(accumulate_color){
 			glActiveTexture(GL_TEXTURE0);
-			glBindTexture(GL_TEXTURE_2D, last_acc_color);
+			//glBindTexture(GL_TEXTURE_2D, last_acc_color);
+			glBindTexture(GL_TEXTURE_2D, last_acc_color);//albedo
 			glUniform1i(glGetUniformLocation(pass3.program, "texPass0"), 0);
+
+			//glActiveTexture(GL_TEXTURE1);
+			////glBindTexture(GL_TEXTURE_2D, last_acc_color);
+			//glBindTexture(GL_TEXTURE_2D, taa_output);
+			//glUniform1i(glGetUniformLocation(pass3.program, "texPass1"), 1);
+
+			//glActiveTexture(GL_TEXTURE2);
+			////glBindTexture(GL_TEXTURE_2D, last_acc_color);
+			//glBindTexture(GL_TEXTURE_2D, curNormalDepth);
+			//glUniform1i(glGetUniformLocation(pass3.program, "texPass2"),2);
 		}
 		else {
 			glActiveTexture(GL_TEXTURE0);

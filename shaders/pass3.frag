@@ -24,12 +24,18 @@ float LinearizeDepth(float depth)
 
 void  main(){
     vec3 color=texture2D(texPass0,pix.xy*0.5+0.5).rgb;
+    
+    //vec3 tmpcolor=texture2D(texPass1,pix.xy*0.5+0.5).rgb;
     color=tonrMapping(color,1.5);
     color=pow(color,vec3(1.0/2.2));
-    //vec4 tmpcolor=texture2D(texPass1,pix.xy*0.5+0.5).rgba;
+
+    //float depth=texture2D(texPass2,pix.xy*0.5+0.5).a;
 
     //color.a=LinearizeDepth(color.a);
+    
     fragColor=vec4(color.rgb,1.0);
+    
+    
 
 
     

@@ -5,7 +5,7 @@ in vec3 pix;
 //out vec4 fragColor;
 layout (location = 0) out vec4 fragColor;
 layout (location = 1) out vec4 worldNormal_screenDepth;
-layout (location = 2) out vec4 worldPosition;
+layout (location = 2) out vec4 Albedo;
 
 // ----------------------------------------------------------------------------- //
 
@@ -18,6 +18,7 @@ uniform int hdrResolution;
 
 uniform samplerBuffer triangles;
 uniform samplerBuffer nodes;
+uniform samplerBuffer pointLights;//to be set in host side
 
 uniform sampler2DArray material_array;
 
@@ -29,15 +30,24 @@ uniform vec3 eye;
 uniform mat4 cameraRotate;
 uniform bool use_normal_map;
 uniform bool accumulate;
+uniform int pointLightSize;//to be set in host side
+ 
 
 // ----------------------------------------------------------------------------- //
 
 #define PI              3.1415926
 #define INF             114514.0
+#define epsilon         1e-6f
 #define SIZE_TRIANGLE   15  //12 before modify
 #define SIZE_BVHNODE    4
+#define SIZE_POINTLIGHT 2   
 
 // ----------------------------------------------------------------------------- //
+
+struct PointLight{
+    vec3 position;
+    vec3 radiance;
+};
 
 // Triangle 数据格式
 struct Triangle {
@@ -99,6 +109,17 @@ struct SampleResult {
 };
 
 // ----------------------------------------------------------------------------- //
+
+PointLight getPointLight(int i){
+    int offset = i * SIZE_POINTLIGHT;
+    PointLight light;
+
+    light.position = texelFetch(pointLights, offset + 0).xyz;
+    light.radiance = texelFetch(pointLights, offset + 1).xyz;
+
+    return light;
+}
+
 
 // 获取第 i 下标的三角形
 Triangle getTriangle(int i) {
@@ -795,6 +816,8 @@ float hdrPdf(vec3 L, int hdrResolution) {
     return pdf * p_convert;
 }
 
+
+
 // 获取 BRDF 在 L 方向上的概率密度
 float BRDF_Pdf(vec3 V, vec3 N, vec3 L, in Material material) {
     float NdotL = dot(N, L);
@@ -842,54 +865,6 @@ float misMixWeight(float a, float b) {
 
 // ----------------------------------------------------------------------------- //
 
-// 路径追踪
-vec3 pathTracing(HitResult hit, int maxBounce) {
-
-    vec3 Lo = vec3(0);      // 最终的颜色
-    vec3 history = vec3(1); // 递归积累的颜色
-
-    for(int bounce=0; bounce<maxBounce; bounce++) {
-        vec3 V = -hit.viewDir;
-        vec3 N = hit.normal;
-        
-        vec2 uv = sobolVec2(frameCounter+1u, uint(bounce));
-        uv = CranleyPattersonRotation(uv);
-        //uv = vec2(rand(), rand());
-
-        vec3 L = SampleHemisphere(uv.x, uv.y);
-        L = toNormalHemisphere(L, hit.normal);                          // 出射方向 wi
-        float pdf = 1.0 / (2.0 * PI);                                   // 半球均匀采样概率密度
-        float cosine_o = max(0, dot(V, N));                             // 入射光和法线夹角余弦
-        float cosine_i = max(0, dot(L, N));                             // 出射光和法线夹角余弦
-        vec3 tangent, bitangent;
-        getTangent(N, tangent, bitangent);
-        vec3 f_r = BRDF_Evaluate_aniso(V, N, L, tangent, bitangent, hit.material);
-
-        // 发射光线
-        Ray randomRay;
-        randomRay.startPoint = hit.hitPoint;
-        randomRay.direction = L;
-        HitResult newHit = hitBVH(randomRay);
-
-        // 未命中
-        if(!newHit.isHit) {
-            vec3 skyColor = hdrColor(randomRay.direction);
-            Lo += history * skyColor * f_r * cosine_i / pdf;
-            break;
-        }
-        
-        // 命中光源积累颜色
-        vec3 Le = newHit.material.emissive;
-        Lo += history * Le * f_r * cosine_i / pdf;
-        
-        // 递归(步进)
-        hit = newHit;
-        history *= f_r * cosine_i / pdf;  // 累积颜色
-    }
-    
-    return Lo;
-}
-
 // nee light sampling advise 
 
 // Your question is a bit hard to answer because it depends what is exactly meant by samples.
@@ -911,6 +886,94 @@ vec3 pathTracing(HitResult hit, int maxBounce) {
 //                 break;
 // }
 
+vec3 calculatePointLight(Ray ray, HitResult hitdata,inout float pdf){
+    if(pointLightSize==0){
+        pdf = 0;
+        return vec3(0);
+    }
+
+    pdf = (float(pointLightSize)) / (2.0 * PI);//半球面采样
+
+    PointLight light = getPointLight(int(rand()*pointLightSize));
+
+    vec3 newDir = normalize((light.position - hitdata.hitPoint));
+    
+    float dist = length(light.position - hitdata.hitPoint);
+
+     // Test if the point is visible from the light
+    Ray shadowRay;
+    shadowRay.startPoint = hitdata.hitPoint;
+    shadowRay.direction = newDir;
+
+    HitResult shadowHit = hitBVH(shadowRay);
+
+    if(shadowHit.isHit){
+        float shadowDist = length(shadowHit.hitPoint - hitdata.hitPoint);
+        if(shadowDist < dist){
+            return vec3(0);
+        }
+    }
+    
+    // Quadratic attenuation
+    vec3 pointLightValue = (light.radiance / (dist * dist));
+
+    vec3 brdf_Disney = BRDF_Evaluate(-hitdata.viewDir, hitdata.normal, newDir, hitdata.material);
+
+    return pointLightValue * brdf_Disney * abs(dot(newDir, hitdata.normal)) / pdf;
+    //radiance * fr * cos / pdf
+}
+
+//do not forget to use sobel sequence
+//be awared about this pdf, it may cause NAN problem?
+//maybe check if return vec3(0) to avoid this 
+vec3 hdriLight(Ray ray, HitResult hitdata,inout float pdf){
+    float r1 = rand();
+    float r2 = rand();
+
+    vec3 newDir= SampleHdr(r1,r2);
+
+    Ray shadowRay;
+    shadowRay.startPoint = hitdata.hitPoint;
+    shadowRay.direction = newDir;
+
+    HitResult shadowHit = hitBVH(shadowRay);
+    //hit something ,then hdr sample is failed
+    if(shadowHit.isHit){
+        pdf = 0.0;
+        return vec3(0);
+    }
+
+    vec3 hdriValue = hdrColor(newDir);
+
+    vec3 brdf_Disney = BRDF_Evaluate(-hitdata.viewDir, hitdata.normal, newDir, hitdata.material);
+
+    pdf = hdrPdf(shadowRay.direction, hdrResolution);
+
+    return brdf_Disney * abs(dot(newDir, hitdata.normal)) * hdriValue / pdf;
+}
+
+void shade(Ray ray, HitResult hitdata, vec3 newDir, inout vec3 hitLight, inout vec3 reduction) {
+
+    vec3 brdf_Disney = BRDF_Evaluate(-hitdata.viewDir, hitdata.normal, newDir, hitdata.material);
+
+    float brdfPdf = BRDF_Pdf(-hitdata.viewDir, hitdata.normal, newDir, hitdata.material);
+    float hdriPdf = 0;
+    float pointPdf = 0;
+
+    vec3 hdriLightCalc = hdriLight(ray,hitdata, hdriPdf);
+    vec3 pointLightCalc = calculatePointLight(ray,hitdata,pointPdf);
+    vec3 brdfLightCalc = hitdata.material.emissive * (brdf_Disney * abs(dot(newDir, hitdata.normal))) / brdfPdf;
+
+    float sum_weight = hdriPdf + pointPdf + brdfPdf; //hdriPdf won't be zero , check later
+
+    float w1 = hdriPdf  / sum_weight;
+    float w2 = pointPdf / sum_weight;
+    float w3 = brdfPdf  / sum_weight;
+
+    hitLight = reduction * (w1 * hdriLightCalc + w2 * pointLightCalc + w3 * brdfLightCalc);
+
+    reduction *= (brdf_Disney * abs(dot(newDir, hitdata.normal))) / brdfPdf;
+}
 
 // 路径追踪 -- 重要性采样版本
 vec3 pathTracingImportanceSampling(HitResult hit, int maxBounce) {
@@ -1016,28 +1079,83 @@ void main() {
     //vec4 dir = cameraRotate * vec4(pix.xy+AA, -1.0, 0.0);
     ray.direction = normalize(dir.xyz);
 
-    // primary hit
-    HitResult firstHit = hitBVH(ray);
-    vec3 color;
-    vec3 worldNormal = vec3(0);
-    float screenDepth = INF;
-    //vec4 viewPos=vec4(0,0,0,1);
-    if(!firstHit.isHit) {
-        color = vec3(0);
-        color = hdrColor(ray.direction);
-    } else {
-        screenDepth = (firstHit.hitPoint.z-ray.startPoint.z)/ray.direction.z;
-        worldNormal = firstHit.normal;
-        //viewPos.xyz=ray.startPoint+firstHit.distance*ray.direction;
-        //viewPos.w=1.0;
+//----------------------------
+    //have three render target, remember to fill
+    // Accumulated radiance
+    vec3 color = vec3(0);//to get output(for convenience)
 
-        int maxBounce = 2;
-        vec3 Le = firstHit.material.emissive;
-        vec3 Li = pathTracingImportanceSampling(firstHit, maxBounce);
-        //vec3 Li = pathTracing(firstHit, maxBounce);
-        color = Le + Li;
-    }
+    vec3 light = vec3(0);
+
+    // How much light is lost in the path
+    vec3 reduction = vec3(1);
+
+    int MAXBOUNCES = 2;
+    for (int i = 0; i < MAXBOUNCES; i++){
+
+        HitResult nearestHit = hitBVH(ray);
+
+        if(i == 0){
+            if(!nearestHit.isHit){
+                Albedo = vec4(0);
+            }else{
+                Albedo = vec4(nearestHit.material.baseColor,1.0);
+            }
+        }
+
+        if(!nearestHit.isHit){
+            light += hdrColor(ray.direction) * reduction;
+            break;
+        }
+
+        vec2 uv = sobolVec2(frameCounter+1u, uint(i));
+        uv = CranleyPattersonRotation(uv);
+        float xi_1 = uv.x;
+        float xi_2 = uv.y;
+        float xi_3 = rand(); 
+
+        // 采样 BRDF 得到一个方向 L
+        vec3 L = SampleBRDF(xi_1, xi_2, xi_3, -nearestHit.viewDir, nearestHit.normal, nearestHit.material); 
+        float NdotL = dot(nearestHit.normal, L);
+        if(NdotL <= 0.0) break;
+
+        vec3 hitLight;//contains the result at this iteration
+        shade(ray,nearestHit,L,hitLight,reduction);
     
+        light += hitLight;
+
+        ray.startPoint = nearestHit.hitPoint;
+        ray.direction = L;
+    }
+
+    light = clamp(light, 0, 10);
+    if(!isnan(light.x) && !isnan(light.y) && !isnan(light.z)){
+        color = light;
+    }
+
+//----------------------------
+
+    // // primary hit
+    // HitResult firstHit = hitBVH(ray);
+    // vec3 color;
+    // vec3 worldNormal = vec3(0);
+    // float screenDepth = INF;
+    // //vec4 viewPos=vec4(0,0,0,1);
+    // if(!firstHit.isHit) {
+    //     color = vec3(0);
+    //     color = hdrColor(ray.direction);
+    // } else {
+    //     screenDepth = (firstHit.hitPoint.z-ray.startPoint.z)/ray.direction.z;
+    //     worldNormal = firstHit.normal;
+    //     //viewPos.xyz=ray.startPoint+firstHit.distance*ray.direction;
+    //     //viewPos.w=1.0;
+
+    //     int maxBounce = 2;
+    //     vec3 Le = firstHit.material.emissive;
+    //     vec3 Li = pathTracingImportanceSampling(firstHit, maxBounce);
+    //     //vec3 Li = pathTracing(firstHit, maxBounce);
+    //     color = Le + Li;
+    // }
+ //------------------------------   
     // 和上一帧混合
     if(accumulate){
         vec3 lastColor = texture2D(lastFrame, pix.xy*0.5+0.5).rgb;
@@ -1050,8 +1168,9 @@ void main() {
     
     //fragColor = vec4(texture2DArray(material_array,vec3(pix.xy*0.5f+0.5f,3.0f)).xyz,1.0);
 
-    worldNormal_screenDepth = vec4(worldNormal,screenDepth);
-    worldPosition = vec4(firstHit.hitPoint,1.0);
+    //worldNormal_screenDepth = vec4(worldNormal,screenDepth);
+    worldNormal_screenDepth = vec4(1);
+    //Albedo = vec4(firstHit.material.baseColor,1.0);//change it 
     
 
     
