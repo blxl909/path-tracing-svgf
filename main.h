@@ -41,8 +41,8 @@ GLuint hdrMap;
 GLuint hdrCache;
 int hdrResolution;
 
-const unsigned int SCR_WIDTH = 512;
-const unsigned int SCR_HEIGHT = 512;
+const unsigned int SCR_WIDTH = 800;
+const unsigned int SCR_HEIGHT = 800;
 
 // timing
 float deltaTime = 0.0f;
@@ -632,8 +632,8 @@ public:
 	std::vector<GLuint> colorAttachments;
 	int triangle_size;
 	GLuint program;
-	int width = 512;
-	int height = 512;
+	int width = SCR_WIDTH;
+	int height = SCR_HEIGHT;
 	std::vector<float> vert;
 
 	void bindData(std::vector<float> vertices) {
@@ -705,8 +705,8 @@ public:
 	GLuint vao, vbo;
 	std::vector<GLuint> colorAttachments;
 	GLuint program;
-	int width = 512;
-	int height = 512;
+	int width = SCR_WIDTH;
+	int height = SCR_HEIGHT;
 	void bindData(bool finalPass = false) {
 		if (!finalPass) glGenFramebuffers(1, &FBO);
 		glBindFramebuffer(GL_FRAMEBUFFER, FBO);

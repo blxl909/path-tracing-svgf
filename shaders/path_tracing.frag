@@ -27,8 +27,8 @@ uniform sampler2D hdrCache;
 
 uniform vec3 eye;
 uniform mat4 cameraRotate;
-uniform bool use_normal_map;//haven't set in host side
-uniform bool accumulate;//haven't set in host side
+uniform bool use_normal_map;
+uniform bool accumulate;
 
 // ----------------------------------------------------------------------------- //
 
@@ -285,9 +285,8 @@ HitResult hitArray(Ray ray, int l, int r) {
         vec3 p2 = hit_tri.p2;
         vec3 p3 = hit_tri.p3;
         vec3 P = res.hitPoint;
-        //p不是世界空间坐标?
 
-        //应该不需要透视矫正插值 在world空间中仍然保持线性性质
+        //不需要透视矫正插值 在world空间中仍然保持线性性质
         float alpha = (-(P.x-p2.x)*(p3.y-p2.y) + (P.y-p2.y)*(p3.x-p2.x)) / (-(p1.x-p2.x)*(p3.y-p2.y) + (p1.y-p2.y)*(p3.x-p2.x)+1e-7);
         float beta  = (-(P.x-p3.x)*(p1.y-p3.y) + (P.y-p3.y)*(p1.x-p3.x)) / (-(p2.x-p3.x)*(p1.y-p3.y) + (p2.y-p3.y)*(p1.x-p3.x)+1e-7);
         float gama  = 1.0 - alpha - beta;
@@ -301,8 +300,29 @@ HitResult hitArray(Ray ray, int l, int r) {
         if(res.material.metallic<0.0f){
             res.material.metallic = texture2DArray(material_array,vec3(smooth_uv,float(mat_id+1.0f))).x;//srgb or linear?
         }
-        if(false/*use_normal_map*/){
+        if(use_normal_map){
+            //calculate TBN matrix
+            vec3 edge1 = p2-p1;
+            vec3 edge2 = p3-p1;
+            vec2 deltaUV1 = hit_tri.uv2 - hit_tri.uv1;
+            vec2 deltaUV2 = hit_tri.uv3 - hit_tri.uv1;
 
+            float f = 1.0f / (deltaUV1.x * deltaUV2.y - deltaUV2.x * deltaUV1.y);
+            vec3 tangent;
+            tangent.x = f * (deltaUV2.y * edge1.x - deltaUV1.y * edge2.x);
+            tangent.y = f * (deltaUV2.y * edge1.y - deltaUV1.y * edge2.y);
+            tangent.z = f * (deltaUV2.y * edge1.z - deltaUV1.y * edge2.z);
+            tangent = normalize(tangent);
+
+            vec3 bitangent = cross(tangent,res.normal);
+
+            mat3 TBN = mat3(tangent,bitangent,res.normal);
+            
+            //sample texture normal
+            vec3 tex_normal = texture2DArray(material_array,vec3(smooth_uv,float(mat_id+2.0f))).xyz;
+            tex_normal = normalize(tex_normal * 2.0f - 1.0f);
+            //get actual normal define in world space
+            res.normal = normalize(TBN * tex_normal);
         }
         if(res.material.roughness<0.0f){
             res.material.roughness = texture2DArray(material_array,vec3(smooth_uv,float(mat_id+3.0f))).x;
@@ -926,22 +946,12 @@ vec3 pathTracingImportanceSampling(HitResult hit, int maxBounce) {
                 
                 vec3 f_r = BRDF_Evaluate(V, N, L, hit.material);
                 float pdf_brdf = BRDF_Pdf(V, N, L, hit.material);
-//--------------
-                // if(is_previous_specular){
-                //     Lo+=history * color * f_r * dot(N, L) / pdf_light;
-                //     break;
-                // }
-//--------------
+
                 // 多重重要性采样
                 float mis_weight = misMixWeight(pdf_light, pdf_brdf);
                 Lo += mis_weight * history * color * f_r * dot(N, L) / pdf_light;
 
-//----------
-                // if(bounce==0){
-                //     direct_light=mis_weight * history * color * f_r * dot(N, L) / pdf_light;
-                // }
-//----------
-                //Lo += history * color * f_r * dot(N, L) / pdf_light;   // 尝龟
+
             }
             
         }
@@ -978,13 +988,6 @@ vec3 pathTracingImportanceSampling(HitResult hit, int maxBounce) {
             // 多重重要性采样
             float mis_weight = misMixWeight(pdf_brdf, pdf_light);   // f(a,b) = a^2 / (a^2 + b^2)
             Lo += mis_weight * history * color * f_r * NdotL / pdf_brdf;
-            //Lo += history * color * f_r * NdotL / pdf_brdf;   // 尝龟
-
-//----------
-                
-                //indirect_light+=mis_weight * history * color * f_r * dot(N, L) / pdf_light;
-                
-//----------
 
             break;
         }
@@ -993,16 +996,7 @@ vec3 pathTracingImportanceSampling(HitResult hit, int maxBounce) {
         // 命中光源积累颜色
         vec3 Le = newHit.material.emissive;
         Lo += history * Le * f_r * NdotL / pdf_brdf;
-//----------
-                
-        //indirect_light+=history * Le * f_r * NdotL / pdf_brdf;
-                
-//----------
 
-
-//----------------
-        //is_previous_specular=hit.material.specular>0.6f?true:false;
-//----------------
         // 递归(步进)
         hit = newHit;
         history *= f_r * NdotL / pdf_brdf;   // 累积颜色

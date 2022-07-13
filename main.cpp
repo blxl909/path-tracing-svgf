@@ -51,17 +51,17 @@ float upAngle = 10.0;
 float rotatAngle = 0.0;
 float r_dis = 2.0;
 
-mat4 pre_viewproj = glm::perspective(glm::radians(90.0f), 1.0f, 0.1f, 1000.0f);
+mat4 pre_viewproj = glm::perspective(glm::radians(90.0f), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 1000.0f);
 
 int main(int argc, char** argv)
 {
-	const char* glsl_version = "#version 430";
+	const char* glsl_version = "#version 450";
 	glfwInit();
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 5);
 	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
-	GLFWwindow* window = glfwCreateWindow(SCR_WIDTH, SCR_HEIGHT, "LearnOpenGL", NULL, NULL);
+	GLFWwindow* window = glfwCreateWindow(SCR_WIDTH, SCR_HEIGHT, "GPU_pathtracer", NULL, NULL);
 	if (window == NULL)
 	{
 		std::cout << "Failed to create GLFW window" << std::endl;
@@ -120,7 +120,7 @@ int main(int argc, char** argv)
 	m.baseColor = vec3(-1, -1, -1);
 	std::vector<float> vertices;
 	//std::vector<GLuint> indices;
-	readObj("models/clock.obj", vertices, triangles, m, getTransformMatrix(vec3(0, -20, 0), vec3(0.5, 0, 0), vec3(1, 1, 1)), true, objIndex++);
+	readObj("models/clock.obj", vertices, triangles, m, getTransformMatrix(vec3(0, -20, 0), vec3(0, 0, 0), vec3(1, 1, 1)), true, objIndex++);
 
 	m.roughness = -1.0;
 	m.metallic = -1.0;
@@ -365,6 +365,7 @@ int main(int argc, char** argv)
 	bool svgf_reprojected_pic = false;
 	bool final_pic = false;
 	bool accumulate_color = true;
+	bool use_normal_texture = false;
 	while (!glfwWindowShouldClose(window))
 	{
 		// per-frame time logic
@@ -384,7 +385,7 @@ int main(int argc, char** argv)
 
 
 		glm::mat4 view = cameraRotate;
-		glm::mat4 projection = glm::perspective(glm::radians(90.0f), 1.0f, 0.1f, 1000.0f);
+		glm::mat4 projection = glm::perspective(glm::radians(90.0f), (float)SCR_WIDTH/(float)SCR_HEIGHT, 0.1f, 1000.0f);
 
 		ImGui_ImplOpenGL3_NewFrame();
 		ImGui_ImplGlfw_NewFrame();
@@ -427,6 +428,9 @@ int main(int argc, char** argv)
 				final_pic = false;
 				accumulate_color = true;
 			}
+			if (ImGui::Checkbox("use_normal_texture", &use_normal_texture)) {
+				frameCounter = 0;
+			}
 				
 
 			//ImGui::SliderFloat("float", &f, 0.0f, 1.0f);            // Edit 1 float using a slider from 0.0f to 1.0f
@@ -459,6 +463,7 @@ int main(int argc, char** argv)
 		glUniformMatrix4fv(glGetUniformLocation(pass_path_tracing.program, "cameraRotate"), 1, GL_FALSE, value_ptr(cameraRotate));
 		glUniform1ui(glGetUniformLocation(pass_path_tracing.program, "frameCounter"), frameCounter);  // 传计数器用作随机种子
 		glUniform1i(glGetUniformLocation(pass_path_tracing.program, "hdrResolution"), hdrResolution);   // hdf 分辨率
+		glUniform1i(glGetUniformLocation(pass_path_tracing.program, "use_normal_map"), use_normal_texture);
 
 		glActiveTexture(GL_TEXTURE0);
 		glBindTexture(GL_TEXTURE_BUFFER, trianglesTextureBuffer);
@@ -693,8 +698,8 @@ void cursor_position_callback(GLFWwindow* window, double x, double y) {
 			frameCounter = 0;
 
 			// 调整旋转
-			rotatAngle += 150 * (x - lastX) / 512;
-			upAngle += 150 * (y - lastY) / 512;
+			rotatAngle += 150 * (x - lastX) / SCR_WIDTH;
+			upAngle += 150 * (y - lastY) / SCR_HEIGHT;
 			upAngle = glm::min(upAngle, 89.0f);
 			upAngle = glm::max(upAngle, -89.0f);
 			lastX = x, lastY = y;
