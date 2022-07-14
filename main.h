@@ -26,6 +26,9 @@
 #include "lib/stb_image.h"
 #include "lib/filesystem.h"
 
+#include "Utils/camera.h"
+#include "Utils/PointLight.h"
+
 #define INF 114514.0
 
 
@@ -36,6 +39,7 @@ using namespace glm;
 unsigned int rbo;
 GLuint trianglesTextureBuffer;
 GLuint nodesTextureBuffer;
+GLuint pointLightBuffer;
 
 GLuint hdrMap;
 GLuint hdrCache;
@@ -53,6 +57,7 @@ float lastX = (float)SCR_WIDTH / 2.0;
 float lastY = (float)SCR_HEIGHT / 2.0;
 bool firstMouse = true;
 
+Camera camera;
 
 
 // 物体表面材质定义

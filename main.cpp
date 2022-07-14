@@ -46,12 +46,10 @@ RenderPass pass3;
 NormalRenderPass init_pass;
 
 
-unsigned int frameCounter = 0;
-float upAngle = 10.0;
-float rotatAngle = 0.0;
-float r_dis = 2.0;
 
-mat4 pre_viewproj = glm::perspective(glm::radians(90.0f), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 1000.0f);
+
+
+mat4 pre_viewproj = camera.cam_proj_mat * camera.cam_view_mat;
 
 int main(int argc, char** argv)
 {
@@ -105,8 +103,24 @@ int main(int argc, char** argv)
 	// -----------------------------
 	glEnable(GL_DEPTH_TEST);
 	glEnable(GL_CULL_FACE);
+	
 
 	std::vector<Triangle> triangles;
+	std::vector<PointLight> pointLights;
+
+	pointLights.push_back(PointLight(vec3(0.5, 0.5, 0.5), vec3(10, 10, 10)));
+	pointLights.push_back(PointLight(vec3(-0.5, 0.75, 0.5), vec3(8, 4, 4)));
+	pointLights.push_back(PointLight(vec3(-0.5, 0.75, 0.75), vec3(0, 3, 4)));
+	pointLights.push_back(PointLight(vec3(0.75, 0.75, 0.75), vec3(12, 3, 4)));
+
+	GLuint tbo2;
+	glGenBuffers(1, &tbo2);
+	glBindBuffer(GL_TEXTURE_BUFFER, tbo2);
+	glBufferData(GL_TEXTURE_BUFFER, pointLights.size() * sizeof(pointLights), &pointLights[0], GL_STATIC_DRAW);
+	glGenTextures(1, &pointLightBuffer);
+	glBindTexture(GL_TEXTURE_BUFFER, pointLightBuffer);
+	glTexBuffer(GL_TEXTURE_BUFFER, GL_RGB32F, tbo2);
+
 
 	int objIndex = 0;
 
@@ -120,7 +134,7 @@ int main(int argc, char** argv)
 	m.baseColor = vec3(-1, -1, -1);
 	std::vector<float> vertices;
 	//std::vector<GLuint> indices;
-	readObj("models/clock.obj", vertices, triangles, m, getTransformMatrix(vec3(0, -20, 0), vec3(0, 0, 0), vec3(1, 1, 1)), true, objIndex++);
+	readObj("models/clock.obj", vertices, triangles, m, getTransformMatrix(vec3(0, 0, 0), vec3(0, 0, 0), vec3(1, 1, 1)), true, objIndex++);
 
 	m.roughness = -1.0;
 	m.metallic = -1.0;
@@ -281,6 +295,7 @@ int main(int argc, char** argv)
 	glUniform1i(glGetUniformLocation(pass_path_tracing.program, "nNodes"), nodes.size());
 	glUniform1i(glGetUniformLocation(pass_path_tracing.program, "width"), pass_path_tracing.width);
 	glUniform1i(glGetUniformLocation(pass_path_tracing.program, "height"), pass_path_tracing.height);
+	glUniform1i(glGetUniformLocation(pass_path_tracing.program, "pointLightSize"), pointLights.size());
 	glUseProgram(0);
 
 //---------------------------------------
@@ -370,22 +385,19 @@ int main(int argc, char** argv)
 	{
 		// per-frame time logic
 		// --------------------
+		if (slot_index % 4 != 0) {
+			std::cout << "currently only support 4 textures each obj object, and should be set all of them" << std::endl;
+			break;
+		}
 		float currentFrame = static_cast<float>(glfwGetTime());
 		deltaTime = currentFrame - lastFrame;
 		lastFrame = currentFrame;
 
-		float fps = 1.0 / deltaTime;
-		std::cout << "\r";
-		std::cout << std::fixed << std::setprecision(2) << "FPS : " << fps << "    迭代次数: " << frameCounter;
+		
+		camera.update(window, deltaTime);
 
-		vec3 eye = vec3(-sin(radians(rotatAngle)) * cos(radians(upAngle)), sin(radians(upAngle)), cos(radians(rotatAngle)) * cos(radians(upAngle)));
-		eye.x *= r_dis; eye.y *= r_dis; eye.z *= r_dis;
-		mat4 cameraRotate = lookAt(eye, vec3(0, 0, 0), vec3(0, 1, 0));  // 相机注视着原点
-
-
-
-		glm::mat4 view = cameraRotate;
-		glm::mat4 projection = glm::perspective(glm::radians(90.0f), (float)SCR_WIDTH/(float)SCR_HEIGHT, 0.1f, 1000.0f);
+		glm::mat4 view = camera.cam_view_mat;
+		glm::mat4 projection = camera.cam_proj_mat;
 
 		ImGui_ImplOpenGL3_NewFrame();
 		ImGui_ImplGlfw_NewFrame();
@@ -401,35 +413,35 @@ int main(int argc, char** argv)
 
 			ImGui::Text("pick a pass to show the output.");               // Display some text (you can use a format strings too)
 			if (ImGui::Checkbox("path_tracing_pic_1spp", &path_tracing_pic_1spp)) {
-				frameCounter = 0;
+				camera.frameCounter = 0;
 				path_tracing_pic_1spp = true;
 				svgf_reprojected_pic = false;
 				final_pic = false;
 				accumulate_color = false;
 			}
 			if (ImGui::Checkbox("svgf_reprojected_pic", &svgf_reprojected_pic)) {
-				frameCounter = 0;
+				camera.frameCounter = 0;
 				path_tracing_pic_1spp = false;
 				svgf_reprojected_pic = true;
 				final_pic = false;
 				accumulate_color = false;
 			}
 			if (ImGui::Checkbox("final_pic", &final_pic)) {
-				frameCounter = 0;
+				camera.frameCounter = 0;
 				path_tracing_pic_1spp = false;
 				svgf_reprojected_pic = false;
 				final_pic = true;
 				accumulate_color = false;
 			}
 			if (ImGui::Checkbox("show_accumulate_color", &accumulate_color)) {
-				frameCounter = 0;
+				camera.frameCounter = 0;
 				path_tracing_pic_1spp = false;
 				svgf_reprojected_pic = false;
 				final_pic = false;
 				accumulate_color = true;
 			}
 			if (ImGui::Checkbox("use_normal_texture", &use_normal_texture)) {
-				frameCounter = 0;
+				camera.frameCounter = 0;
 			}
 				
 
@@ -453,15 +465,15 @@ int main(int argc, char** argv)
 		glUniformMatrix4fv(glGetUniformLocation(init_pass.program, "projection"), 1, GL_FALSE, value_ptr(projection));
 
 		glUniformMatrix4fv(glGetUniformLocation(init_pass.program, "pre_viewproj"), 1, GL_FALSE, value_ptr(pre_viewproj));
-		glUniform1ui(glGetUniformLocation(init_pass.program, "frameCounter"), frameCounter++);
+		glUniform1ui(glGetUniformLocation(init_pass.program, "frameCounter"), camera.frameCounter);
 
 		init_pass.draw();
 //-------------------------------------------
-		cameraRotate = inverse(cameraRotate);
+		mat4 cameraRotate = inverse(camera.cam_view_mat);
 		glUseProgram(pass_path_tracing.program);
-		glUniform3fv(glGetUniformLocation(pass_path_tracing.program, "eye"), 1, value_ptr(eye));
+		glUniform3fv(glGetUniformLocation(pass_path_tracing.program, "eye"), 1, value_ptr(camera.cam_position));
 		glUniformMatrix4fv(glGetUniformLocation(pass_path_tracing.program, "cameraRotate"), 1, GL_FALSE, value_ptr(cameraRotate));
-		glUniform1ui(glGetUniformLocation(pass_path_tracing.program, "frameCounter"), frameCounter);  // 传计数器用作随机种子
+		glUniform1ui(glGetUniformLocation(pass_path_tracing.program, "frameCounter"), camera.frameCounter);  // 传计数器用作随机种子
 		glUniform1i(glGetUniformLocation(pass_path_tracing.program, "hdrResolution"), hdrResolution);   // hdf 分辨率
 		glUniform1i(glGetUniformLocation(pass_path_tracing.program, "use_normal_map"), use_normal_texture);
 		//cur hard code it ,set tbo later
@@ -495,6 +507,10 @@ int main(int argc, char** argv)
 		glActiveTexture(GL_TEXTURE5);
 		glBindTexture(GL_TEXTURE_2D_ARRAY, materials_array);
 		glUniform1i(glGetUniformLocation(pass_path_tracing.program, "material_array"), 5);
+
+		glActiveTexture(GL_TEXTURE6);
+		glBindTexture(GL_TEXTURE_BUFFER, pointLightBuffer);
+		glUniform1i(glGetUniformLocation(pass_path_tracing.program, "pointLights"), 6);
 
 		pass_path_tracing.draw();
 //-------------------------------
@@ -692,6 +708,8 @@ int main(int argc, char** argv)
 		glfwPollEvents();
 		cameraRotate = inverse(cameraRotate);
 		pre_viewproj = projection * cameraRotate;
+
+		camera.frameCounter++;
 	}
 
 	ImGui_ImplOpenGL3_Shutdown();
@@ -708,14 +726,15 @@ void cursor_position_callback(GLFWwindow* window, double x, double y) {
 	if (!io.WantCaptureMouse) {
 		int state = glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT);
 		if (state == GLFW_PRESS) {
-			frameCounter = 0;
+			camera.frameCounter = 0;
 
 			// 调整旋转
-			rotatAngle += 150 * (x - lastX) / SCR_WIDTH;
-			upAngle += 150 * (y - lastY) / SCR_HEIGHT;
-			upAngle = glm::min(upAngle, 89.0f);
-			upAngle = glm::max(upAngle, -89.0f);
+			camera.rotatAngle += 150 * (x - lastX) / camera.width;
+			camera.upAngle += 150 * (y - lastY) / camera.height;
+			camera.upAngle = glm::min(camera.upAngle, 89.0f);
+			camera.upAngle = glm::max(camera.upAngle, -89.0f);
 			lastX = x, lastY = y;
+			camera.dirty = true;
 		}
 	}
 }
@@ -738,9 +757,10 @@ void scroll_callback(GLFWwindow* window, double xoffset, double yoffset)
 {
 	ImGuiIO& io = ImGui::GetIO();
 	if (!io.WantCaptureMouse) {
-		frameCounter = 0;
+		camera.frameCounter = 0;
 		int dir = yoffset > 0 ? 1 : -1;
-		r_dis += -dir * 0.5;
+		camera.r_dis += -dir * 0.5;
+		camera.dirty = true;
 	}
 }
 
@@ -749,6 +769,7 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height)
 	// make sure the viewport matches the new window dimensions; note that width and 
 	// height will be significantly larger than specified on retina displays.
 	glViewport(0, 0, width, height);
+	camera.dirty = true;
 }
 
 
