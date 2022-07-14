@@ -116,7 +116,7 @@ int main(int argc, char** argv)
 	GLuint tbo2;
 	glGenBuffers(1, &tbo2);
 	glBindBuffer(GL_TEXTURE_BUFFER, tbo2);
-	glBufferData(GL_TEXTURE_BUFFER, pointLights.size() * sizeof(pointLights), &pointLights[0], GL_STATIC_DRAW);
+	glBufferData(GL_TEXTURE_BUFFER, pointLights.size() * sizeof(PointLight), &pointLights[0], GL_STATIC_DRAW);
 	glGenTextures(1, &pointLightBuffer);
 	glBindTexture(GL_TEXTURE_BUFFER, pointLightBuffer);
 	glTexBuffer(GL_TEXTURE_BUFFER, GL_RGB32F, tbo2);
@@ -476,9 +476,7 @@ int main(int argc, char** argv)
 		glUniform1ui(glGetUniformLocation(pass_path_tracing.program, "frameCounter"), camera.frameCounter);  // 传计数器用作随机种子
 		glUniform1i(glGetUniformLocation(pass_path_tracing.program, "hdrResolution"), hdrResolution);   // hdf 分辨率
 		glUniform1i(glGetUniformLocation(pass_path_tracing.program, "use_normal_map"), use_normal_texture);
-		//cur hard code it ,set tbo later
-		glUniform1i(glGetUniformLocation(pass_path_tracing.program, "pointLightSize"), 0);
-
+		
 		glActiveTexture(GL_TEXTURE0);
 		glBindTexture(GL_TEXTURE_BUFFER, trianglesTextureBuffer);
 		glUniform1i(glGetUniformLocation(pass_path_tracing.program, "triangles"), 0);
