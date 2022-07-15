@@ -168,6 +168,7 @@
     <ClInclude Include="lib\stb_image.h" />
     <ClInclude Include="main.h" />
     <ClInclude Include="Utils\camera.h" />
+    <ClInclude Include="Utils\gui_config.h" />
     <ClInclude Include="Utils\PointLight.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

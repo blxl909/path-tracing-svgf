@@ -106,20 +106,7 @@ int main(int argc, char** argv)
 	
 
 	std::vector<Triangle> triangles;
-	std::vector<PointLight> pointLights;
-
-	pointLights.push_back(PointLight(vec3(0.5, 0.5, 0.5), vec3(10, 10, 10)));
-	pointLights.push_back(PointLight(vec3(-0.5, 0.75, 0.5), vec3(8, 4, 4)));
-	pointLights.push_back(PointLight(vec3(-0.5, 0.75, 0.75), vec3(0, 3, 4)));
-	pointLights.push_back(PointLight(vec3(0.75, 0.75, 0.75), vec3(12, 3, 4)));
-
-	GLuint tbo2;
-	glGenBuffers(1, &tbo2);
-	glBindBuffer(GL_TEXTURE_BUFFER, tbo2);
-	glBufferData(GL_TEXTURE_BUFFER, pointLights.size() * sizeof(PointLight), &pointLights[0], GL_STATIC_DRAW);
-	glGenTextures(1, &pointLightBuffer);
-	glBindTexture(GL_TEXTURE_BUFFER, pointLightBuffer);
-	glTexBuffer(GL_TEXTURE_BUFFER, GL_RGB32F, tbo2);
+	
 
 
 	int objIndex = 0;
@@ -216,6 +203,21 @@ int main(int argc, char** argv)
 	glBindTexture(GL_TEXTURE_BUFFER, nodesTextureBuffer);
 	glTexBuffer(GL_TEXTURE_BUFFER, GL_RGB32F, tbo1);
 
+	std::vector<PointLight> pointLights;
+
+	pointLights.push_back(PointLight(vec3(0.5, 0.5, 0.5), vec3(10, 10, 10)));
+	pointLights.push_back(PointLight(vec3(-0.5, 0.75, 0.5), vec3(8, 4, 4)));
+	pointLights.push_back(PointLight(vec3(-0.5, 0.75, 0.75), vec3(0, 3, 4)));
+	pointLights.push_back(PointLight(vec3(0.75, 0.75, 0.75), vec3(12, 3, 4)));
+
+	GLuint tbo2;
+	glGenBuffers(1, &tbo2);
+	glBindBuffer(GL_TEXTURE_BUFFER, tbo2);
+	glBufferData(GL_TEXTURE_BUFFER, pointLights.size() * sizeof(PointLight), &pointLights[0], GL_STATIC_DRAW);
+	glGenTextures(1, &pointLightBuffer);
+	glBindTexture(GL_TEXTURE_BUFFER, pointLightBuffer);
+	glTexBuffer(GL_TEXTURE_BUFFER, GL_RGB32F, tbo2);
+
 	// hdr 全景图
 	HDRLoaderResult hdrRes;
 	bool r = HDRLoader::load("./HDR/room.hdr", hdrRes);
@@ -254,6 +256,7 @@ int main(int argc, char** argv)
 	load_texture_to_material_array("Textures/plant_metallic.bmp", slot_index++);
 	load_texture_to_material_array("Textures/plant_normal.bmp", slot_index++);
 	load_texture_to_material_array("Textures/plant_roughness.bmp", slot_index++);
+
 
 	
 //----------------------
@@ -470,230 +473,128 @@ int main(int argc, char** argv)
 		init_pass.draw();
 //-------------------------------------------
 		mat4 cameraRotate = inverse(camera.cam_view_mat);
-		glUseProgram(pass_path_tracing.program);
-		glUniform3fv(glGetUniformLocation(pass_path_tracing.program, "eye"), 1, value_ptr(camera.cam_position));
-		glUniformMatrix4fv(glGetUniformLocation(pass_path_tracing.program, "cameraRotate"), 1, GL_FALSE, value_ptr(cameraRotate));
-		glUniform1ui(glGetUniformLocation(pass_path_tracing.program, "frameCounter"), camera.frameCounter);  // 传计数器用作随机种子
-		glUniform1i(glGetUniformLocation(pass_path_tracing.program, "hdrResolution"), hdrResolution);   // hdf 分辨率
-		glUniform1i(glGetUniformLocation(pass_path_tracing.program, "use_normal_map"), use_normal_texture);
-		
-		glActiveTexture(GL_TEXTURE0);
-		glBindTexture(GL_TEXTURE_BUFFER, trianglesTextureBuffer);
-		glUniform1i(glGetUniformLocation(pass_path_tracing.program, "triangles"), 0);
 
-		glActiveTexture(GL_TEXTURE1);
-		glBindTexture(GL_TEXTURE_BUFFER, nodesTextureBuffer);
-		glUniform1i(glGetUniformLocation(pass_path_tracing.program, "nodes"), 1);
+		pass_path_tracing.set_uniform_vec3("eye", camera.cam_position);
+		pass_path_tracing.set_uniform_mat4("cameraRotate", cameraRotate);
+		pass_path_tracing.set_uniform_uint("frameCounter", camera.frameCounter);
+		pass_path_tracing.set_uniform_int("hdrResolution", hdrResolution);
+		pass_path_tracing.set_uniform_bool("use_normal_map", use_normal_texture);
+		pass_path_tracing.set_uniform_bool("accumulate", accumulate_color);
 
-		glUniform1i(glGetUniformLocation(pass_path_tracing.program, "accumulate"), accumulate_color);
+		pass_path_tracing.reset_texture_slot();
+		pass_path_tracing.set_texture_uniform(GL_TEXTURE_BUFFER, trianglesTextureBuffer, "triangles");
+		pass_path_tracing.set_texture_uniform(GL_TEXTURE_BUFFER, nodesTextureBuffer, "nodes");
+	
 		if (accumulate_color) {
-			glActiveTexture(GL_TEXTURE2);
-			glBindTexture(GL_TEXTURE_2D, last_acc_color);
-			glUniform1i(glGetUniformLocation(pass_path_tracing.program, "lastFrame"), 2);
+			pass_path_tracing.set_texture_uniform(GL_TEXTURE_2D, last_acc_color, "lastFrame");
 		}
+
+		pass_path_tracing.set_texture_uniform(GL_TEXTURE_2D, hdrMap, "hdrMap");
+		pass_path_tracing.set_texture_uniform(GL_TEXTURE_2D, hdrCache, "hdrCache");
+		pass_path_tracing.set_texture_uniform(GL_TEXTURE_2D_ARRAY, materials_array, "material_array");
+		pass_path_tracing.set_texture_uniform(GL_TEXTURE_BUFFER, pointLightBuffer, "pointLights");
+
 		
-		
-
-		glActiveTexture(GL_TEXTURE3);
-		glBindTexture(GL_TEXTURE_2D, hdrMap);
-		glUniform1i(glGetUniformLocation(pass_path_tracing.program, "hdrMap"), 3);
-
-		glActiveTexture(GL_TEXTURE4);
-		glBindTexture(GL_TEXTURE_2D, hdrCache);
-		glUniform1i(glGetUniformLocation(pass_path_tracing.program, "hdrCache"), 4);
-
-		glActiveTexture(GL_TEXTURE5);
-		glBindTexture(GL_TEXTURE_2D_ARRAY, materials_array);
-		glUniform1i(glGetUniformLocation(pass_path_tracing.program, "material_array"), 5);
-
-		glActiveTexture(GL_TEXTURE6);
-		glBindTexture(GL_TEXTURE_BUFFER, pointLightBuffer);
-		glUniform1i(glGetUniformLocation(pass_path_tracing.program, "pointLights"), 6);
 
 		pass_path_tracing.draw();
 //-------------------------------
-		glUseProgram(pass2.program);
-		glActiveTexture(GL_TEXTURE0);
-		glBindTexture(GL_TEXTURE_2D, curColor);
-		glUniform1i(glGetUniformLocation(pass2.program, "texPass0"), 0);
 
-		glActiveTexture(GL_TEXTURE1);
-		glBindTexture(GL_TEXTURE_2D, init_normal_depth);
-		glUniform1i(glGetUniformLocation(pass2.program, "texPass1"), 1);
-
-		glActiveTexture(GL_TEXTURE2);
-		glBindTexture(GL_TEXTURE_2D, init_world_position);
-		glUniform1i(glGetUniformLocation(pass2.program, "texPass2"), 2);
-
-		glActiveTexture(GL_TEXTURE3);
-		glBindTexture(GL_TEXTURE_2D, lastNormalDepth);
-		glUniform1i(glGetUniformLocation(pass2.program, "lastNormalDepth"), 3);
-
-		glActiveTexture(GL_TEXTURE4);
-		glBindTexture(GL_TEXTURE_2D, lastColor);
-		glUniform1i(glGetUniformLocation(pass2.program, "lastColor"), 4);
-
-		glActiveTexture(GL_TEXTURE5);
-		glBindTexture(GL_TEXTURE_2D, lastMomentHistory);
-		glUniform1i(glGetUniformLocation(pass2.program, "lastMomentHistory"), 5);
+		pass2.reset_texture_slot();
+		pass2.set_texture_uniform(GL_TEXTURE_2D, curColor, "texPass0");
+		pass2.set_texture_uniform(GL_TEXTURE_2D, init_normal_depth, "texPass1");
+		pass2.set_texture_uniform(GL_TEXTURE_2D, init_world_position, "texPass2");
+		pass2.set_texture_uniform(GL_TEXTURE_2D, lastNormalDepth, "lastNormalDepth");
+		pass2.set_texture_uniform(GL_TEXTURE_2D, lastColor, "lastColor");
+		pass2.set_texture_uniform(GL_TEXTURE_2D, lastMomentHistory, "lastMomentHistory");
 
 		/*glActiveTexture(GL_TEXTURE6);
 		glBindTexture(GL_TEXTURE_2D, init_velocity);
 		glUniform1i(glGetUniformLocation(pass2.program, "velocity"), 6);*/
 
-		//mat4 inv_viewproj=inverse(inverse(cameraRotate)*camera.perspective_mat);
-		//glUniformMatrix4fv(glGetUniformLocation(pass2.program, "viewproj"), 1, GL_FALSE, value_ptr(cameraRotate));
-		glUniformMatrix4fv(glGetUniformLocation(pass2.program, "pre_viewproj"), 1, GL_FALSE, value_ptr(pre_viewproj));
-
+		pass2.set_uniform_mat4("pre_viewproj", pre_viewproj);
 
 		pass2.draw();
-
 //-------------------------------
- 		glUseProgram(pass_moment_filter.program);
-		glActiveTexture(GL_TEXTURE0);
-		glBindTexture(GL_TEXTURE_2D, reprojectedColor);
-		glUniform1i(glGetUniformLocation(pass_moment_filter.program, "reprojected_color"), 0);
 
-		glActiveTexture(GL_TEXTURE1);
-		glBindTexture(GL_TEXTURE_2D, reprojectedmomenthistory);
-		glUniform1i(glGetUniformLocation(pass_moment_filter.program, "reprojected_moment_history"), 1);
+		pass_moment_filter.reset_texture_slot();
+		pass_moment_filter.set_texture_uniform(GL_TEXTURE_2D, reprojectedColor, "reprojected_color");
+		pass_moment_filter.set_texture_uniform(GL_TEXTURE_2D, reprojectedmomenthistory, "reprojected_moment_history");
+		pass_moment_filter.set_texture_uniform(GL_TEXTURE_2D, init_normal_depth, "normal_depth");
 
-		glActiveTexture(GL_TEXTURE2);
-		glBindTexture(GL_TEXTURE_2D, init_normal_depth);
-		glUniform1i(glGetUniformLocation(pass_moment_filter.program, "normal_depth"), 2);
-
-		glUniform1f(glGetUniformLocation(pass_moment_filter.program, "sigma_z"), 1.0f);
-		glUniform1f(glGetUniformLocation(pass_moment_filter.program, "sigma_n"), 128.0f);
-		glUniform1f(glGetUniformLocation(pass_moment_filter.program, "sigma_l"), 4.0f);
+		pass_moment_filter.set_uniform_float("sigma_z", 1.0f);
+		pass_moment_filter.set_uniform_float("sigma_n", 128.0f);
+		pass_moment_filter.set_uniform_float("sigma_l", 4.0f);
 
 		pass_moment_filter.draw();
 //-------------------------------
  		int num_atrous_iterations = 5;
 
-
-
-
 		for (int i = 0; i < num_atrous_iterations; i++) {
-			glUseProgram(pass_Atrous_filter.program);
 
-			glActiveTexture(GL_TEXTURE0);
-			glBindTexture(GL_TEXTURE_2D, init_normal_depth);//curNormalDepth
-			glUniform1i(glGetUniformLocation(pass_Atrous_filter.program, "normal_depth"), 0);
+			pass_Atrous_filter.reset_texture_slot();
+			pass_Atrous_filter.set_texture_uniform(GL_TEXTURE_2D, init_normal_depth, "normal_depth");
 
 			int step_size = 1 << i;
-			glUniform1i(glGetUniformLocation(pass_Atrous_filter.program, "step_size"), step_size);
+			pass_Atrous_filter.set_uniform_int("step_size", step_size);
 
 			if (i == 0) {
-				glActiveTexture(GL_TEXTURE1);
-				glBindTexture(GL_TEXTURE_2D, variance_filtered_color);
-				glUniform1i(glGetUniformLocation(pass_Atrous_filter.program, "variance_computed_color"), 1);
+				pass_Atrous_filter.set_texture_uniform(GL_TEXTURE_2D, variance_filtered_color, "variance_computed_color");
 			}
 			else {
-				glActiveTexture(GL_TEXTURE1);
-				glBindTexture(GL_TEXTURE_2D, tmp_atrous_result);
-				glUniform1i(glGetUniformLocation(pass_Atrous_filter.program, "variance_computed_color"), 1);
+				pass_Atrous_filter.set_texture_uniform(GL_TEXTURE_2D, tmp_atrous_result, "variance_computed_color");
 			}
 			pass_Atrous_filter.draw();
-			glUseProgram(0);
+
 
 			if (i == 1) {
-				glUseProgram(save_next_frame_pass.program);
-				glActiveTexture(GL_TEXTURE0);
-				glBindTexture(GL_TEXTURE_2D, atrous_flitered_color0);
-				glUniform1i(glGetUniformLocation(save_next_frame_pass.program, "in_texture"), 0);
+				save_next_frame_pass.reset_texture_slot();
+				save_next_frame_pass.set_texture_uniform(GL_TEXTURE_2D, atrous_flitered_color0, "in_texture");
 				save_next_frame_pass.draw();
-				glUseProgram(0);
 			}
 
-			glUseProgram(bilt_pass.program);
-			glActiveTexture(GL_TEXTURE0);
-			glBindTexture(GL_TEXTURE_2D, atrous_flitered_color0);
-			glUniform1i(glGetUniformLocation(bilt_pass.program, "in_texture"), 0);
+			bilt_pass.reset_texture_slot();
+			bilt_pass.set_texture_uniform(GL_TEXTURE_2D, atrous_flitered_color0, "in_texture");
 			bilt_pass.draw();
-			glUseProgram(0);
-
+	
 		}
 //-------------------------------
-		glUseProgram(pass_taa.program);
-		glActiveTexture(GL_TEXTURE0);
-		glBindTexture(GL_TEXTURE_2D, atrous_flitered_color0);
-		glUniform1i(glGetUniformLocation(pass_taa.program, "currentColor"), 0);
-
-		glActiveTexture(GL_TEXTURE1);
-		glBindTexture(GL_TEXTURE_2D, last_color_taa);
-		glUniform1i(glGetUniformLocation(pass_taa.program, "previousColor"), 1);
-
-		glActiveTexture(GL_TEXTURE2);
-		glBindTexture(GL_TEXTURE_2D, init_velocity);
-		glUniform1i(glGetUniformLocation(pass_taa.program, "velocityTexture"), 2);
-
-		glActiveTexture(GL_TEXTURE3);
-		glBindTexture(GL_TEXTURE_2D, init_normal_depth);
-		glUniform1i(glGetUniformLocation(pass_taa.program, "normal_depth"), 3);
+		pass_taa.reset_texture_slot();
+		pass_taa.set_texture_uniform(GL_TEXTURE_2D, atrous_flitered_color0, "currentColor");
+		pass_taa.set_texture_uniform(GL_TEXTURE_2D, last_color_taa, "previousColor");
+		pass_taa.set_texture_uniform(GL_TEXTURE_2D, init_velocity, "velocityTexture");
+		pass_taa.set_texture_uniform(GL_TEXTURE_2D, init_normal_depth, "normal_depth");
 
 		pass_taa.draw();
 //-------------------------------
-		glUseProgram(pass_pre_info.program);
-		glActiveTexture(GL_TEXTURE0);
-		glBindTexture(GL_TEXTURE_2D, next_frame_color_input);
-		glUniform1i(glGetUniformLocation(pass_pre_info.program, "texPass0"), 0);
 
-		glActiveTexture(GL_TEXTURE1);
-		glBindTexture(GL_TEXTURE_2D, init_normal_depth);
-		glUniform1i(glGetUniformLocation(pass_pre_info.program, "texPass1"), 1);
+		pass_pre_info.reset_texture_slot();
 
-		glActiveTexture(GL_TEXTURE2);
-		glBindTexture(GL_TEXTURE_2D, reprojectedmomenthistory);
-		glUniform1i(glGetUniformLocation(pass_pre_info.program, "texPass2"), 2);
-
-		glActiveTexture(GL_TEXTURE3);
-		glBindTexture(GL_TEXTURE_2D, taa_output);
-		glUniform1i(glGetUniformLocation(pass_pre_info.program, "curTAAoutput"), 3);
-
-		glActiveTexture(GL_TEXTURE4);
-		glBindTexture(GL_TEXTURE_2D, curColor);
-		glUniform1i(glGetUniformLocation(pass_pre_info.program, "curAccColor"), 4);
+		pass_pre_info.set_texture_uniform(GL_TEXTURE_2D, next_frame_color_input, "texPass0");
+		pass_pre_info.set_texture_uniform(GL_TEXTURE_2D, init_normal_depth, "texPass1");
+		pass_pre_info.set_texture_uniform(GL_TEXTURE_2D, reprojectedmomenthistory, "texPass2");
+		pass_pre_info.set_texture_uniform(GL_TEXTURE_2D, taa_output, "curTAAoutput");
+		pass_pre_info.set_texture_uniform(GL_TEXTURE_2D, curColor, "curAccColor");
+		
 
 		pass_pre_info.draw();
 
 //-------------------------------
 
-		glUseProgram(pass3.program);
+		pass3.reset_texture_slot();
 		if (path_tracing_pic_1spp) {
-			glActiveTexture(GL_TEXTURE0);
-			glBindTexture(GL_TEXTURE_2D, curColor);
-			glUniform1i(glGetUniformLocation(pass3.program, "texPass0"), 0);
+			pass3.set_texture_uniform(GL_TEXTURE_2D, curColor, "texPass0");
 		}
 		else if (svgf_reprojected_pic) {
-			glActiveTexture(GL_TEXTURE0);
-			glBindTexture(GL_TEXTURE_2D, reprojectedColor);
-			glUniform1i(glGetUniformLocation(pass3.program, "texPass0"), 0);
+			pass3.set_texture_uniform(GL_TEXTURE_2D, reprojectedColor, "texPass0");
 		}
 		else if (final_pic) {
-			glActiveTexture(GL_TEXTURE0);
-			glBindTexture(GL_TEXTURE_2D, taa_output);
-			glUniform1i(glGetUniformLocation(pass3.program, "texPass0"), 0);
+			pass3.set_texture_uniform(GL_TEXTURE_2D, taa_output, "texPass0");
 		}
 		else if(accumulate_color){
-			glActiveTexture(GL_TEXTURE0);
-			//glBindTexture(GL_TEXTURE_2D, last_acc_color);
-			glBindTexture(GL_TEXTURE_2D, last_acc_color);//albedo
-			glUniform1i(glGetUniformLocation(pass3.program, "texPass0"), 0);
-
-			//glActiveTexture(GL_TEXTURE1);
-			////glBindTexture(GL_TEXTURE_2D, last_acc_color);
-			//glBindTexture(GL_TEXTURE_2D, taa_output);
-			//glUniform1i(glGetUniformLocation(pass3.program, "texPass1"), 1);
-
-			//glActiveTexture(GL_TEXTURE2);
-			////glBindTexture(GL_TEXTURE_2D, last_acc_color);
-			//glBindTexture(GL_TEXTURE_2D, curNormalDepth);
-			//glUniform1i(glGetUniformLocation(pass3.program, "texPass2"),2);
+			pass3.set_texture_uniform(GL_TEXTURE_2D, last_acc_color, "texPass0");
 		}
 		else {
-			glActiveTexture(GL_TEXTURE0);
-			glBindTexture(GL_TEXTURE_2D, taa_output);
-			glUniform1i(glGetUniformLocation(pass3.program, "texPass0"), 0);
+			pass3.set_texture_uniform(GL_TEXTURE_2D, taa_output, "texPass0");
 		}
 
 		pass3.draw();

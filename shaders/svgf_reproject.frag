@@ -24,7 +24,7 @@ uniform sampler2D lastMomentHistory;//x 方差 、 y history、 z 一阶矩 w �
 uniform int screen_width;//resolution width
 uniform int screen_height;//resolution wheight
 uniform mat4 pre_viewproj;
-uniform mat4 viewproj;
+//uniform mat4 viewproj;
 
 
 

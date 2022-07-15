@@ -13,6 +13,7 @@ extern const unsigned int SCR_HEIGHT;
 
 class Camera {
 public:
+	//currently the width and height have no effect on render target size 
 	int width = int(SCR_WIDTH);
 	int height = int(SCR_HEIGHT);
 

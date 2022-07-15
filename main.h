@@ -28,6 +28,7 @@
 
 #include "Utils/camera.h"
 #include "Utils/PointLight.h"
+#include "Utils/gui_config.h"
 
 #define INF 114514.0
 
@@ -712,6 +713,8 @@ public:
 	GLuint program;
 	int width = SCR_WIDTH;
 	int height = SCR_HEIGHT;
+	GLint texture_slot = 0;
+
 	void bindData(bool finalPass = false) {
 		if (!finalPass) glGenFramebuffers(1, &FBO);
 		glBindFramebuffer(GL_FRAMEBUFFER, FBO);
@@ -761,6 +764,47 @@ public:
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 		glUseProgram(0);
 	}
+	void reset_texture_slot() {
+		texture_slot = 0;
+	}
+	void set_texture_uniform(GLenum target,GLuint texture, const GLchar* uniform_name) {
+		glUseProgram(program);
+		glActiveTexture(GL_TEXTURE0 + texture_slot);
+		glBindTexture(target, texture);
+		glUniform1i(glGetUniformLocation(program, uniform_name), texture_slot++);
+		//glUseProgram(0);
+	}
+
+	void set_uniform_mat4(const GLchar* uniform_name,glm::mat4 value) {
+		glUseProgram(program);
+		glUniformMatrix4fv(glGetUniformLocation(program, uniform_name), 1, GL_FALSE, value_ptr(value));
+	}
+
+	void set_uniform_float(const GLchar* uniform_name, float value) {
+		glUseProgram(program);
+		glUniform1f(glGetUniformLocation(program, uniform_name), value);
+	}
+
+	void set_uniform_int(const GLchar* uniform_name, int value) {
+		glUseProgram(program);
+		glUniform1i(glGetUniformLocation(program, uniform_name), value);
+	}
+
+	void set_uniform_uint(const GLchar* uniform_name, unsigned int value) {
+		glUseProgram(program);
+		glUniform1ui(glGetUniformLocation(program, uniform_name), value);
+	}
+
+	void set_uniform_bool(const GLchar* uniform_name, bool value) {
+		glUseProgram(program);
+		glUniform1i(glGetUniformLocation(program, uniform_name), value);
+	}
+
+	void set_uniform_vec3(const GLchar* uniform_name, glm::vec3 value) {
+		glUseProgram(program);
+		glUniform3fv(glGetUniformLocation(program, uniform_name), 1, value_ptr(value));
+	}
+
 };
 
 void load_texture_to_material_array(std::string img_path, GLint slot) {
