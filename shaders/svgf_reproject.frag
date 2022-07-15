@@ -24,6 +24,9 @@ uniform sampler2D lastMomentHistory;//x 方差 、 y history、 z 一阶矩 w �
 uniform int screen_width;//resolution width
 uniform int screen_height;//resolution wheight
 uniform mat4 pre_viewproj;
+uniform float normal_threshold;
+uniform float depth_threshold;
+
 //uniform mat4 viewproj;
 
 
@@ -36,11 +39,9 @@ bool is_tap_consistent(int x, int y,vec3 curnormal,float curdepth){
     vec3 prev_normal=prev_normal_and_depth.xyz;
     float prev_depth=prev_normal_and_depth.w;
 
-    const float THRESHOLD_NORMAL = 0.8f;//0.95
-	const float THRESHOLD_DEPTH  = 0.2f;//2
 
-    bool consistent_normal = dot(curnormal, prev_normal)  > THRESHOLD_NORMAL;
-	bool consistent_depth  = abs(curdepth - prev_depth) < THRESHOLD_DEPTH;
+    bool consistent_normal = dot(curnormal, prev_normal)  > normal_threshold;
+	bool consistent_depth  = abs(curdepth - prev_depth) < depth_threshold;
 
     return consistent_normal && consistent_depth;
 }

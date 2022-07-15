@@ -67,18 +67,16 @@ public:
 	}
 	void update(GLFWwindow* window, float deltaTime) {
 		processInput_key(window, deltaTime);
-		glm::vec3 eye = glm::vec3(-glm::sin(glm::radians(rotatAngle)) * glm::cos(glm::radians(upAngle)), glm::sin(glm::radians(upAngle)), glm::cos(glm::radians(rotatAngle)) * glm::cos(glm::radians(upAngle)));
-		eye.x *= r_dis; eye.y *= r_dis; eye.z *= r_dis;
-		eye += move_vec;
-		cam_position = eye;
-		look_at_point = move_vec;
-		cam_view_mat = glm::lookAt(cam_position, look_at_point, glm::vec3(0, 1, 0));
 		if (dirty) {
+			glm::vec3 eye = glm::vec3(-glm::sin(glm::radians(rotatAngle)) * glm::cos(glm::radians(upAngle)), glm::sin(glm::radians(upAngle)), glm::cos(glm::radians(rotatAngle)) * glm::cos(glm::radians(upAngle)));
+			eye.x *= r_dis; eye.y *= r_dis; eye.z *= r_dis;
+			eye += move_vec;
+			cam_position = eye;
+			look_at_point = move_vec;
+			cam_view_mat = glm::lookAt(cam_position, look_at_point, glm::vec3(0, 1, 0));
 			frameCounter = 0;
+			dirty = false;
 		}
-
-		dirty = false;
-
 	}
 };
 

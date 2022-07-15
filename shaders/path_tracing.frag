@@ -30,7 +30,9 @@ uniform vec3 eye;
 uniform mat4 cameraRotate;
 uniform bool use_normal_map;
 uniform bool accumulate;
-uniform int pointLightSize;//to be set in host side
+uniform int pointLightSize;
+uniform float clamp_threshold;
+uniform int max_tracing_depth;
  
 
 // ----------------------------------------------------------------------------- //
@@ -1002,7 +1004,7 @@ void main() {
     HitResult firstHit;
     vec3 albe=vec3(1);
     //------------------
-    int MAXBOUNCES = 2;
+    int MAXBOUNCES = max_tracing_depth;
     for (int i = 0; i < MAXBOUNCES; i++){
 
         HitResult nearestHit = hitBVH(ray);
@@ -1043,7 +1045,7 @@ void main() {
         ray.direction = L;
     }
 
-    light = clamp(light, 0, 10);
+    light = clamp(light, 0, clamp_threshold);
     if(!isnan(light.x) && !isnan(light.y) && !isnan(light.z)){
         color = light;
     }

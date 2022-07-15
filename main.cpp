@@ -209,7 +209,7 @@ int main(int argc, char** argv)
 	pointLights.push_back(PointLight(vec3(-0.5, 0.75, 0.5), vec3(8, 4, 4)));
 	pointLights.push_back(PointLight(vec3(-0.5, 0.75, 0.75), vec3(0, 3, 4)));
 	pointLights.push_back(PointLight(vec3(0.75, 0.75, 0.75), vec3(12, 3, 4)));
-
+	//point light tbo
 	GLuint tbo2;
 	glGenBuffers(1, &tbo2);
 	glBindBuffer(GL_TEXTURE_BUFFER, tbo2);
@@ -337,10 +337,6 @@ int main(int argc, char** argv)
 	glUniform1i(glGetUniformLocation(pass_Atrous_filter.program, "screen_width"), SCR_WIDTH);
 	glUniform1i(glGetUniformLocation(pass_Atrous_filter.program, "screen_height"), SCR_HEIGHT);
 
-
-	glUniform1f(glGetUniformLocation(pass_Atrous_filter.program, "sigma_z"), 1.0f);
-	glUniform1f(glGetUniformLocation(pass_Atrous_filter.program, "sigma_n"), 128.0f);
-	glUniform1f(glGetUniformLocation(pass_Atrous_filter.program, "sigma_l"), 4.0f);
 	glUseProgram(0);
 
 //----------------------------
@@ -379,11 +375,15 @@ int main(int argc, char** argv)
 
 	pass_pre_info.bindData(false);
 //----------------------------
-	bool path_tracing_pic_1spp = false;
+	/*bool path_tracing_pic_1spp = false;
 	bool svgf_reprojected_pic = false;
 	bool final_pic = false;
 	bool accumulate_color = true;
+	bool use_normal_texture = false;*/
 	bool use_normal_texture = false;
+	debug_gui debug_window;
+	parameter_config config;
+
 	while (!glfwWindowShouldClose(window))
 	{
 		// per-frame time logic
@@ -406,43 +406,48 @@ int main(int argc, char** argv)
 		ImGui_ImplGlfw_NewFrame();
 		ImGui::NewFrame();
 
-		
+		{
+			ImGui::Begin("parameter settings");
+			ImGui::Text("control parameter during passes.");
+
+			ImGui::SliderFloat("reporject_depth_threshold", &config.reproj_depth_threshold, 0.0f, 1.0f);
+			ImGui::SliderFloat("reporject_normal_threshold", &config.reproj_normal_threshold, 0.0f, 1.0f);
+			
+			ImGui::SliderFloat("color_clamp_threshold", &config.clamp_threshold, 1.0f, 10.0f);
+			ImGui::SliderInt("max_tracing_depth", &config.max_tracing_depth, 1, 6);
+
+			ImGui::SliderFloat("sigma_z", &config.sigma_z, 0.1f, 5.0f);
+			ImGui::SliderFloat("sigma_n", &config.sigma_n, 50.0f, 200.0f);
+			ImGui::SliderFloat("sigma_l", &config.sigma_l, 1.0f, 10.0f);
+
+			ImGui::SliderInt("num_atrous_iterations", &config.num_atrous_iterations, 2, 8);
+			
+			ImGui::End();
+		}
+
 
 		{
-			static float f = 0.0f;
-			static int counter = 0;
 
 			ImGui::Begin("show pass image");                          // Create a window called "Hello, world!" and append into it.
-
 			ImGui::Text("pick a pass to show the output.");               // Display some text (you can use a format strings too)
-			if (ImGui::Checkbox("path_tracing_pic_1spp", &path_tracing_pic_1spp)) {
+
+			if (ImGui::Button("path_tracing_pic_1spp")) {
 				camera.frameCounter = 0;
-				path_tracing_pic_1spp = true;
-				svgf_reprojected_pic = false;
-				final_pic = false;
-				accumulate_color = false;
+				debug_window.update_debug_state(debug_view_type::path_tracing_pic_1spp);
 			}
-			if (ImGui::Checkbox("svgf_reprojected_pic", &svgf_reprojected_pic)) {
+			if (ImGui::Button("svgf_reprojected_pic")) {
 				camera.frameCounter = 0;
-				path_tracing_pic_1spp = false;
-				svgf_reprojected_pic = true;
-				final_pic = false;
-				accumulate_color = false;
+				debug_window.update_debug_state(debug_view_type::svgf_reprojected_pic);
 			}
-			if (ImGui::Checkbox("final_pic", &final_pic)) {
+			if (ImGui::Button("final_pic")) {
 				camera.frameCounter = 0;
-				path_tracing_pic_1spp = false;
-				svgf_reprojected_pic = false;
-				final_pic = true;
-				accumulate_color = false;
+				debug_window.update_debug_state(debug_view_type::final_pic);
 			}
-			if (ImGui::Checkbox("show_accumulate_color", &accumulate_color)) {
+			if (ImGui::Button("accumulate_color")) {
 				camera.frameCounter = 0;
-				path_tracing_pic_1spp = false;
-				svgf_reprojected_pic = false;
-				final_pic = false;
-				accumulate_color = true;
+				debug_window.update_debug_state(debug_view_type::accumulate_color);
 			}
+			
 			if (ImGui::Checkbox("use_normal_texture", &use_normal_texture)) {
 				camera.frameCounter = 0;
 			}
@@ -451,12 +456,11 @@ int main(int argc, char** argv)
 			//ImGui::SliderFloat("float", &f, 0.0f, 1.0f);            // Edit 1 float using a slider from 0.0f to 1.0f
 			//ImGui::ColorEdit3("clear color", (float*)&clear_color); // Edit 3 floats representing a color
 
-			//if (ImGui::Button("Button"))                            // Buttons return true when clicked (most widgets return true when edited/activated)
-			//	counter++;
 			//ImGui::SameLine();
 			//ImGui::Text("counter = %d", counter);
 
 			ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
+			ImGui::Text("iterations: %u", camera.frameCounter);
 			ImGui::End();
 		}
 
@@ -479,13 +483,15 @@ int main(int argc, char** argv)
 		pass_path_tracing.set_uniform_uint("frameCounter", camera.frameCounter);
 		pass_path_tracing.set_uniform_int("hdrResolution", hdrResolution);
 		pass_path_tracing.set_uniform_bool("use_normal_map", use_normal_texture);
-		pass_path_tracing.set_uniform_bool("accumulate", accumulate_color);
+		pass_path_tracing.set_uniform_bool("accumulate", debug_window.accumulate_color);
+		pass_path_tracing.set_uniform_float("clamp_threshold", config.clamp_threshold);
+		pass_path_tracing.set_uniform_int("max_tracing_depth", config.max_tracing_depth);
 
 		pass_path_tracing.reset_texture_slot();
 		pass_path_tracing.set_texture_uniform(GL_TEXTURE_BUFFER, trianglesTextureBuffer, "triangles");
 		pass_path_tracing.set_texture_uniform(GL_TEXTURE_BUFFER, nodesTextureBuffer, "nodes");
 	
-		if (accumulate_color) {
+		if (debug_window.accumulate_color) {
 			pass_path_tracing.set_texture_uniform(GL_TEXTURE_2D, last_acc_color, "lastFrame");
 		}
 
@@ -494,7 +500,6 @@ int main(int argc, char** argv)
 		pass_path_tracing.set_texture_uniform(GL_TEXTURE_2D_ARRAY, materials_array, "material_array");
 		pass_path_tracing.set_texture_uniform(GL_TEXTURE_BUFFER, pointLightBuffer, "pointLights");
 
-		
 
 		pass_path_tracing.draw();
 //-------------------------------
@@ -506,6 +511,9 @@ int main(int argc, char** argv)
 		pass2.set_texture_uniform(GL_TEXTURE_2D, lastNormalDepth, "lastNormalDepth");
 		pass2.set_texture_uniform(GL_TEXTURE_2D, lastColor, "lastColor");
 		pass2.set_texture_uniform(GL_TEXTURE_2D, lastMomentHistory, "lastMomentHistory");
+
+		pass2.set_uniform_float("depth_threshold", config.reproj_depth_threshold);
+		pass2.set_uniform_float("normal_threshold", config.reproj_normal_threshold);
 
 		/*glActiveTexture(GL_TEXTURE6);
 		glBindTexture(GL_TEXTURE_2D, init_velocity);
@@ -521,16 +529,18 @@ int main(int argc, char** argv)
 		pass_moment_filter.set_texture_uniform(GL_TEXTURE_2D, reprojectedmomenthistory, "reprojected_moment_history");
 		pass_moment_filter.set_texture_uniform(GL_TEXTURE_2D, init_normal_depth, "normal_depth");
 
-		pass_moment_filter.set_uniform_float("sigma_z", 1.0f);
-		pass_moment_filter.set_uniform_float("sigma_n", 128.0f);
-		pass_moment_filter.set_uniform_float("sigma_l", 4.0f);
+		pass_moment_filter.set_uniform_float("sigma_z", config.sigma_z);
+		pass_moment_filter.set_uniform_float("sigma_n", config.sigma_n);
+		pass_moment_filter.set_uniform_float("sigma_l", config.sigma_l);
 
 		pass_moment_filter.draw();
 //-------------------------------
- 		int num_atrous_iterations = 5;
 
-		for (int i = 0; i < num_atrous_iterations; i++) {
+		pass_Atrous_filter.set_uniform_float("sigma_z", config.sigma_z);
+		pass_Atrous_filter.set_uniform_float("sigma_n", config.sigma_n);
+		pass_Atrous_filter.set_uniform_float("sigma_l", config.sigma_l);
 
+		for (int i = 0; i < config.num_atrous_iterations; i++) {
 			pass_Atrous_filter.reset_texture_slot();
 			pass_Atrous_filter.set_texture_uniform(GL_TEXTURE_2D, init_normal_depth, "normal_depth");
 
@@ -581,16 +591,16 @@ int main(int argc, char** argv)
 //-------------------------------
 
 		pass3.reset_texture_slot();
-		if (path_tracing_pic_1spp) {
+		if (debug_window.path_tracing_pic_1spp) {
 			pass3.set_texture_uniform(GL_TEXTURE_2D, curColor, "texPass0");
 		}
-		else if (svgf_reprojected_pic) {
+		else if (debug_window.svgf_reprojected_pic) {
 			pass3.set_texture_uniform(GL_TEXTURE_2D, reprojectedColor, "texPass0");
 		}
-		else if (final_pic) {
+		else if (debug_window.final_pic) {
 			pass3.set_texture_uniform(GL_TEXTURE_2D, taa_output, "texPass0");
 		}
-		else if(accumulate_color){
+		else if(debug_window.accumulate_color){
 			pass3.set_texture_uniform(GL_TEXTURE_2D, last_acc_color, "texPass0");
 		}
 		else {
