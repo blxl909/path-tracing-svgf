@@ -1053,25 +1053,20 @@ void main() {
 
  //------------------------------   
     // 和上一帧混合
-    if(accumulate){
-        vec3 lastColor = texture2D(lastFrame, pix.xy*0.5+0.5).rgb;
-        color = mix(lastColor, color, 1.0/float(frameCounter+1u));
-    }
-    
-
-    // 输出
-    //if(firstHit.isHit){
-    //    fragColor = vec4(color.x/albe.x,color.y/albe.y,color.z/albe.z,1.0);
-    //}else{
-        fragColor=vec4(color,1.0);
+    //if(accumulate){
+    //    vec3 lastColor = texture2D(lastFrame, pix.xy*0.5+0.5).rgb;
+    //    color = mix(lastColor, color, 1.0/float(frameCounter+1u));
     //}
     
-    
-    //fragColor = vec4(texture2DArray(material_array,vec3(pix.xy*0.5f+0.5f,3.0f)).xyz,1.0);
+
+
+    fragColor=vec4(color,1.0);
+
 
     //worldNormal_screenDepth = vec4(worldNormal,screenDepth);
     worldNormal_screenDepth = vec4(1);
-    //Albedo = vec4(firstHit.material.baseColor,1.0);//change it 
+    Albedo = vec4(firstHit.material.baseColor,1.0);
+    
     
 
     

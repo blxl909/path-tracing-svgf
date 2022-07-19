@@ -167,9 +167,12 @@
     <ClInclude Include="lib\root_directory.h" />
     <ClInclude Include="lib\stb_image.h" />
     <ClInclude Include="main.h" />
+    <ClInclude Include="Utils\BVH.h" />
     <ClInclude Include="Utils\camera.h" />
     <ClInclude Include="Utils\gui_config.h" />
+    <ClInclude Include="Utils\Material.h" />
     <ClInclude Include="Utils\PointLight.h" />
+    <ClInclude Include="Utils\Triangle.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

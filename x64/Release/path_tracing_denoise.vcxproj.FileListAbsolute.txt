@@ -1,2 +1,4 @@
 C:\Users\86135\Desktop\text\x64\Release\path_tracing_denoise.exe
 C:\Users\86135\Desktop\GPU_raytracing\x64\Release\path_tracing_denoise.exe
+C:\Users\86135\Desktop\GPU_raytracing\x64\Release\path_tracing_denoise.vcxproj.CopyComplete
+C:\Users\86135\Desktop\GPU_raytracing\x64\Release\glfw3.dll

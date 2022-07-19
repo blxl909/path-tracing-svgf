@@ -10,6 +10,7 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 GLuint init_normal_depth;
 GLuint init_world_position;
 GLuint init_velocity;
+GLuint init_fwidth;
 
 GLuint curColor;
 GLuint curNormalDepth;
@@ -103,6 +104,7 @@ int main(int argc, char** argv)
 	// -----------------------------
 	glEnable(GL_DEPTH_TEST);
 	glEnable(GL_CULL_FACE);
+	glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
 	
 
 	std::vector<Triangle> triangles;
@@ -110,25 +112,52 @@ int main(int argc, char** argv)
 
 
 	int objIndex = 0;
-
-	// when number is under 0.0, that means we use texture to define it 
-	Material m;
-	m.roughness = -1.0;
-	m.specular = 0.0;//1.0
-	m.metallic = -1.0;//1.0
-	m.clearcoat = 0.0;//1.0
-	m.clearcoatGloss = 0.0;
-	m.baseColor = vec3(-1, -1, -1);
 	std::vector<float> vertices;
-	//std::vector<GLuint> indices;
-	readObj("models/clock.obj", vertices, triangles, m, getTransformMatrix(vec3(0, 0, 0), vec3(0, 0, 0), vec3(1, 1, 1)), true, objIndex++);
+	// when number is under 0.0, that means we use texture to define it 
+	//Material m_clock;
+	//m_clock.roughness = -1.0;
+	//m_clock.specular = 0.0;//1.0
+	//m_clock.metallic = -1.0;//1.0
+	//m_clock.clearcoat = 0.0;//1.0
+	//m_clock.clearcoatGloss = 0.0;
+	//m_clock.baseColor = vec3(-1, -1, -1);
+	//
+	//readObj("models/clock.obj", vertices, triangles, m_clock, getTransformMatrix(vec3(0, 0, 0), vec3(0, 0, 0), vec3(1, 1, 1)), true, objIndex++);
 
-	m.roughness = -1.0;
-	m.metallic = -1.0;
+
+	Material m;
+	m.roughness = 0.5;
+	m.specular = 1.0;
+	m.metallic = 1.0;
+	m.clearcoat = 1.0;
+	m.clearcoatGloss = 0.0;
+	m.baseColor = vec3(1, 0.73, 0.25);
+	readObj("models/teapot.obj", vertices,triangles, m, getTransformMatrix(vec3(0, 0, 0), vec3(0, -0.5, 0), vec3(0.75, 0.75, 0.75)), true,objIndex++);
+
+
+	//Material m;
+	//m.roughness = 0.0;
+	//m.specular = 1.0;//1.0
+	//m.metallic = 1.0;//1.0
+	//m.clearcoat = 1.0;//1.0
+	//m.clearcoatGloss = 0.0;
+	//m.baseColor = vec3(0.75, 0.5, 0.75);
+	//readObj("models/teapot.obj", vertices, triangles, m, getTransformMatrix(vec3(0, 0, 0), vec3(0, 0, 0), vec3(1, 1, 1)), true, objIndex++);
+
+
+	m.roughness = 0.01;
+	m.metallic = 0.1;
+	m.specular = 1.0;
+	m.baseColor = vec3(1, 1, 1);
+	float len = 13000.0;
+	readObj("models/quad.obj", vertices, triangles, m, getTransformMatrix(vec3(0, 0, 0), vec3(0, -0.5, 0), vec3(len, 0.01, len)), false,objIndex++);
+
+
+	/*m.roughness = -1.0;
+	m.metallic =-1.0;
 	m.specular = 0.0;
 	m.baseColor = vec3(-1, -1, -1);
-	float len = 13000.0;
-	//readObj("models/plant.obj", vertices, triangles, m, getTransformMatrix(vec3(0, 0, 0), vec3(-0.75, -0.5, 0), vec3(2, 2, 2)), false, objIndex++);
+	readObj("models/plant.obj", vertices, triangles, m, getTransformMatrix(vec3(0, 0, 0), vec3(-0.75, -0.5, 0), vec3(2, 2, 2)), false, objIndex++);*/
 
 	int nTriangles = triangles.size();
 	std::cout << "模型读取完成: 共 " << nTriangles << " 个三角形" << std::endl;
@@ -205,10 +234,12 @@ int main(int argc, char** argv)
 
 	std::vector<PointLight> pointLights;
 
-	pointLights.push_back(PointLight(vec3(0.5, 0.5, 0.5), vec3(10, 10, 10)));
+
+
+	/*pointLights.push_back(PointLight(vec3(0.5, 0.5, 0.5), vec3(10, 10, 10)));
 	pointLights.push_back(PointLight(vec3(-0.5, 0.75, 0.5), vec3(8, 4, 4)));
 	pointLights.push_back(PointLight(vec3(-0.5, 0.75, 0.75), vec3(0, 3, 4)));
-	pointLights.push_back(PointLight(vec3(0.75, 0.75, 0.75), vec3(12, 3, 4)));
+	pointLights.push_back(PointLight(vec3(0.75, 0.75, 0.75), vec3(12, 3, 4)));*/
 	//point light tbo
 	GLuint tbo2;
 	glGenBuffers(1, &tbo2);
@@ -220,7 +251,7 @@ int main(int argc, char** argv)
 
 	// hdr 全景图
 	HDRLoaderResult hdrRes;
-	bool r = HDRLoader::load("./HDR/room.hdr", hdrRes);
+	bool r = HDRLoader::load("./HDR/chinese_garden_2k.hdr", hdrRes);
 	hdrMap = getTextureRGB32F(hdrRes.width, hdrRes.height);
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB32F, hdrRes.width, hdrRes.height, 0, GL_RGB, GL_FLOAT, hdrRes.cols);
 
@@ -269,10 +300,12 @@ int main(int argc, char** argv)
 	init_world_position = getTextureRGB32F(init_pass.width, init_pass.height);
 	init_normal_depth = getTextureRGB32F(init_pass.width, init_pass.height);
 	init_velocity = getTextureRGB32F(init_pass.width, init_pass.height);
+	init_fwidth = getTextureRGB32F(init_pass.width, init_pass.height);
 
 	init_pass.colorAttachments.push_back(init_world_position);
 	init_pass.colorAttachments.push_back(init_normal_depth);
 	init_pass.colorAttachments.push_back(init_velocity);
+	init_pass.colorAttachments.push_back(init_fwidth);
 
 	init_pass.bindData(vertices);
 
@@ -287,9 +320,12 @@ int main(int argc, char** argv)
 	curColor = getTextureRGB32F(pass_path_tracing.width, pass_path_tracing.height);
 	curNormalDepth = getTextureRGB32F(pass_path_tracing.width, pass_path_tracing.height);
 	Albedo = getTextureRGB32F(pass_path_tracing.width, pass_path_tracing.height);
+	
+
 	pass_path_tracing.colorAttachments.push_back(curColor);
 	pass_path_tracing.colorAttachments.push_back(curNormalDepth);
 	pass_path_tracing.colorAttachments.push_back(Albedo);
+	
 
 	pass_path_tracing.bindData(false);
 
@@ -374,12 +410,70 @@ int main(int argc, char** argv)
 	pass_pre_info.colorAttachments.push_back(last_acc_color);
 
 	pass_pre_info.bindData(false);
+
+//----------------------------------------
+//----------------------------------------
+//----------------------------------------
+
+	RenderPass next_frame_input;
+
+	next_frame_input.program = getShaderProgram("./shaders/save_frame_date.frag", "./shaders/vshader.vsh");
+
+	GLuint lastIllumination = getTextureRGB32F(next_frame_input.width, next_frame_input.height);
+	GLuint last_normal_depth = getTextureRGB32F(next_frame_input.width, next_frame_input.height);
+	GLuint last_Moments_HistoryLength = getTextureRGB32F(next_frame_input.width, next_frame_input.height);
+	
+	next_frame_input.colorAttachments.push_back(lastIllumination);
+	next_frame_input.colorAttachments.push_back(last_normal_depth);
+	next_frame_input.colorAttachments.push_back(last_Moments_HistoryLength);
+
+	next_frame_input.bindData(false);
+
+	
+
+//----------------------------------------
+	RenderPass new_project_pass;
+	new_project_pass.program = getShaderProgram("./shaders/svgf_reproject.frag", "./shaders/vshader.vsh");
+	GLuint curIllumination= getTextureRGB32F(new_project_pass.width, new_project_pass.height);
+	GLuint curMomentHistory = getTextureRGB32F(new_project_pass.width, new_project_pass.height);
+
+	new_project_pass.colorAttachments.push_back(curIllumination);
+	new_project_pass.colorAttachments.push_back(curMomentHistory);
+
+	new_project_pass.bindData(false);
+
+	new_project_pass.set_uniform_float("inv_screen_width", 1.0 / camera.width);
+	new_project_pass.set_uniform_float("inv_screen_height", 1.0 / camera.height);
+
+//------------------------------------
+	RenderPass new_variance_pass;
+	new_variance_pass.program = getShaderProgram("./shaders/svgf_variance.frag", "./shaders/vshader.vsh");
+	GLuint variance_compute_illumination = getTextureRGB32F(new_variance_pass.width, new_variance_pass.height);
+	new_variance_pass.colorAttachments.push_back(variance_compute_illumination);
+	new_variance_pass.bindData(false);
+
+	new_variance_pass.set_uniform_float("inv_screen_width", 1.0 / camera.width);
+	new_variance_pass.set_uniform_float("inv_screen_height", 1.0 / camera.height);
+
+//------------------------------------
+	RenderPass new_atrous_pass;
+	new_atrous_pass.program = getShaderProgram("./shaders/svgf_Atrous.frag", "./shaders/vshader.vsh");
+	GLuint atrous_output = getTextureRGB32F(new_atrous_pass.width, new_atrous_pass.height);
+	new_atrous_pass.colorAttachments.push_back(atrous_output);
+	new_atrous_pass.bindData(false);
+
+	new_atrous_pass.set_uniform_float("inv_screen_width", 1.0 / camera.width);
+	new_atrous_pass.set_uniform_float("inv_screen_height", 1.0 / camera.height);
+
+//------------------------------------
+	RenderPass output_pass;
+	output_pass.program= getShaderProgram("./shaders/pass3.frag", "./shaders/vshader.vsh");
+	output_pass.bindData(true);
+
+
+//----------------------------------------
+//----------------------------------------
 //----------------------------
-	/*bool path_tracing_pic_1spp = false;
-	bool svgf_reprojected_pic = false;
-	bool final_pic = false;
-	bool accumulate_color = true;
-	bool use_normal_texture = false;*/
 	bool use_normal_texture = false;
 	debug_gui debug_window;
 	parameter_config config;
@@ -502,112 +596,179 @@ int main(int argc, char** argv)
 
 
 		pass_path_tracing.draw();
+
+
+//------------------------------
+		new_project_pass.reset_texture_slot();
+		new_project_pass.set_texture_uniform(GL_TEXTURE_2D, init_velocity, "gMotion");
+		new_project_pass.set_texture_uniform(GL_TEXTURE_2D, curColor, "gColor");
+		new_project_pass.set_texture_uniform(GL_TEXTURE_2D, Albedo, "gAlbedo");
+		new_project_pass.set_texture_uniform(GL_TEXTURE_2D, lastIllumination, "gPrevIllum");
+		new_project_pass.set_texture_uniform(GL_TEXTURE_2D, last_Moments_HistoryLength, "gPrevMoments_HistoryLength");
+		new_project_pass.set_texture_uniform(GL_TEXTURE_2D, init_normal_depth, "gNormalAndLinearZ");
+		new_project_pass.set_texture_uniform(GL_TEXTURE_2D, last_normal_depth, "gPrevNormalAndLinearZ");
+		new_project_pass.set_texture_uniform(GL_TEXTURE_2D, init_fwidth, "gNormalDepthFwidth");
+		new_project_pass.draw();
 //-------------------------------
+		new_variance_pass.reset_texture_slot();
+		new_variance_pass.set_uniform_float("gPhiColor", config.sigma_l);
+		new_variance_pass.set_uniform_float("gPhiNormal", config.sigma_n);
+		new_variance_pass.set_texture_uniform(GL_TEXTURE_2D, curIllumination, "gIllumination");
+		new_variance_pass.set_texture_uniform(GL_TEXTURE_2D, curMomentHistory, "gMoments_HistoryLength");
+		new_variance_pass.set_texture_uniform(GL_TEXTURE_2D, init_normal_depth, "gNormalAndLinearZ");
+		new_variance_pass.set_texture_uniform(GL_TEXTURE_2D, init_fwidth, "gNormalDepthFwidth");
+		new_variance_pass.draw();
 
-		pass2.reset_texture_slot();
-		pass2.set_texture_uniform(GL_TEXTURE_2D, curColor, "texPass0");
-		pass2.set_texture_uniform(GL_TEXTURE_2D, init_normal_depth, "texPass1");
-		pass2.set_texture_uniform(GL_TEXTURE_2D, init_world_position, "texPass2");
-		pass2.set_texture_uniform(GL_TEXTURE_2D, lastNormalDepth, "lastNormalDepth");
-		pass2.set_texture_uniform(GL_TEXTURE_2D, lastColor, "lastColor");
-		pass2.set_texture_uniform(GL_TEXTURE_2D, lastMomentHistory, "lastMomentHistory");
-
-		pass2.set_uniform_float("depth_threshold", config.reproj_depth_threshold);
-		pass2.set_uniform_float("normal_threshold", config.reproj_normal_threshold);
-
-		/*glActiveTexture(GL_TEXTURE6);
-		glBindTexture(GL_TEXTURE_2D, init_velocity);
-		glUniform1i(glGetUniformLocation(pass2.program, "velocity"), 6);*/
-
-		pass2.set_uniform_mat4("pre_viewproj", pre_viewproj);
-
-		pass2.draw();
 //-------------------------------
-
-		pass_moment_filter.reset_texture_slot();
-		pass_moment_filter.set_texture_uniform(GL_TEXTURE_2D, reprojectedColor, "reprojected_color");
-		pass_moment_filter.set_texture_uniform(GL_TEXTURE_2D, reprojectedmomenthistory, "reprojected_moment_history");
-		pass_moment_filter.set_texture_uniform(GL_TEXTURE_2D, init_normal_depth, "normal_depth");
-
-		pass_moment_filter.set_uniform_float("sigma_z", config.sigma_z);
-		pass_moment_filter.set_uniform_float("sigma_n", config.sigma_n);
-		pass_moment_filter.set_uniform_float("sigma_l", config.sigma_l);
-
-		pass_moment_filter.draw();
-//-------------------------------
-
-		pass_Atrous_filter.set_uniform_float("sigma_z", config.sigma_z);
-		pass_Atrous_filter.set_uniform_float("sigma_n", config.sigma_n);
-		pass_Atrous_filter.set_uniform_float("sigma_l", config.sigma_l);
 
 		for (int i = 0; i < config.num_atrous_iterations; i++) {
-			pass_Atrous_filter.reset_texture_slot();
-			pass_Atrous_filter.set_texture_uniform(GL_TEXTURE_2D, init_normal_depth, "normal_depth");
+			new_atrous_pass.reset_texture_slot();
 
-			int step_size = 1 << i;
-			pass_Atrous_filter.set_uniform_int("step_size", step_size);
+			new_atrous_pass.set_uniform_float("gPhiColor", config.sigma_l);
+			new_atrous_pass.set_uniform_float("gPhiNormal", config.sigma_n);
+			new_atrous_pass.set_uniform_int("gStepSize", 1 << i);
+
+			new_atrous_pass.set_texture_uniform(GL_TEXTURE_2D, init_normal_depth, "gNormalAndLinearZ");
+			new_atrous_pass.set_texture_uniform(GL_TEXTURE_2D, init_fwidth, "gNormalDepthFwidth");
 
 			if (i == 0) {
-				pass_Atrous_filter.set_texture_uniform(GL_TEXTURE_2D, variance_filtered_color, "variance_computed_color");
+				new_atrous_pass.set_texture_uniform(GL_TEXTURE_2D, variance_compute_illumination, "gIllumination");
 			}
 			else {
-				pass_Atrous_filter.set_texture_uniform(GL_TEXTURE_2D, tmp_atrous_result, "variance_computed_color");
+				new_atrous_pass.set_texture_uniform(GL_TEXTURE_2D, tmp_atrous_result, "gIllumination");
 			}
-			pass_Atrous_filter.draw();
+			new_atrous_pass.draw();
 
+			bilt_pass.reset_texture_slot();
+			bilt_pass.set_texture_uniform(GL_TEXTURE_2D, atrous_output, "in_texture");
+			bilt_pass.draw();
 
 			if (i == 1) {
 				save_next_frame_pass.reset_texture_slot();
-				save_next_frame_pass.set_texture_uniform(GL_TEXTURE_2D, atrous_flitered_color0, "in_texture");
+				save_next_frame_pass.set_texture_uniform(GL_TEXTURE_2D, atrous_output, "in_texture");
 				save_next_frame_pass.draw();
 			}
-
-			bilt_pass.reset_texture_slot();
-			bilt_pass.set_texture_uniform(GL_TEXTURE_2D, atrous_flitered_color0, "in_texture");
-			bilt_pass.draw();
-	
 		}
-//-------------------------------
-		pass_taa.reset_texture_slot();
-		pass_taa.set_texture_uniform(GL_TEXTURE_2D, atrous_flitered_color0, "currentColor");
-		pass_taa.set_texture_uniform(GL_TEXTURE_2D, last_color_taa, "previousColor");
-		pass_taa.set_texture_uniform(GL_TEXTURE_2D, init_velocity, "velocityTexture");
-		pass_taa.set_texture_uniform(GL_TEXTURE_2D, init_normal_depth, "normal_depth");
 
-		pass_taa.draw();
-//-------------------------------
-
-		pass_pre_info.reset_texture_slot();
-
-		pass_pre_info.set_texture_uniform(GL_TEXTURE_2D, next_frame_color_input, "texPass0");
-		pass_pre_info.set_texture_uniform(GL_TEXTURE_2D, init_normal_depth, "texPass1");
-		pass_pre_info.set_texture_uniform(GL_TEXTURE_2D, reprojectedmomenthistory, "texPass2");
-		pass_pre_info.set_texture_uniform(GL_TEXTURE_2D, taa_output, "curTAAoutput");
-		pass_pre_info.set_texture_uniform(GL_TEXTURE_2D, curColor, "curAccColor");
-		
-
-		pass_pre_info.draw();
 
 //-------------------------------
+		next_frame_input.reset_texture_slot();
+		next_frame_input.set_texture_uniform(GL_TEXTURE_2D, next_frame_color_input, "texPass0");
+		next_frame_input.set_texture_uniform(GL_TEXTURE_2D, init_normal_depth, "texPass1");
+		next_frame_input.set_texture_uniform(GL_TEXTURE_2D, curMomentHistory, "texPass2");
 
-		pass3.reset_texture_slot();
-		if (debug_window.path_tracing_pic_1spp) {
-			pass3.set_texture_uniform(GL_TEXTURE_2D, curColor, "texPass0");
-		}
-		else if (debug_window.svgf_reprojected_pic) {
-			pass3.set_texture_uniform(GL_TEXTURE_2D, reprojectedColor, "texPass0");
-		}
-		else if (debug_window.final_pic) {
-			pass3.set_texture_uniform(GL_TEXTURE_2D, taa_output, "texPass0");
-		}
-		else if(debug_window.accumulate_color){
-			pass3.set_texture_uniform(GL_TEXTURE_2D, last_acc_color, "texPass0");
-		}
-		else {
-			pass3.set_texture_uniform(GL_TEXTURE_2D, taa_output, "texPass0");
-		}
+		next_frame_input.draw(); 
+//-----------------------------------
+		output_pass.reset_texture_slot();
+		output_pass.set_texture_uniform(GL_TEXTURE_2D, atrous_output, "texPass0");
+		output_pass.draw();
+//-------------------------------
 
-		pass3.draw();
+//		pass2.reset_texture_slot();
+//		pass2.set_texture_uniform(GL_TEXTURE_2D, curColor, "texPass0");
+//		pass2.set_texture_uniform(GL_TEXTURE_2D, init_normal_depth, "texPass1");
+//		pass2.set_texture_uniform(GL_TEXTURE_2D, init_world_position, "texPass2");
+//		pass2.set_texture_uniform(GL_TEXTURE_2D, lastNormalDepth, "lastNormalDepth");
+//		pass2.set_texture_uniform(GL_TEXTURE_2D, lastColor, "lastColor");
+//		pass2.set_texture_uniform(GL_TEXTURE_2D, lastMomentHistory, "lastMomentHistory");
+//
+//		pass2.set_uniform_float("depth_threshold", config.reproj_depth_threshold);
+//		pass2.set_uniform_float("normal_threshold", config.reproj_normal_threshold);
+//
+//		/*glActiveTexture(GL_TEXTURE6);
+//		glBindTexture(GL_TEXTURE_2D, init_velocity);
+//		glUniform1i(glGetUniformLocation(pass2.program, "velocity"), 6);*/
+//
+//		pass2.set_uniform_mat4("pre_viewproj", pre_viewproj);
+//
+//		pass2.draw();
+////-------------------------------
+//
+//		pass_moment_filter.reset_texture_slot();
+//		pass_moment_filter.set_texture_uniform(GL_TEXTURE_2D, reprojectedColor, "reprojected_color");
+//		pass_moment_filter.set_texture_uniform(GL_TEXTURE_2D, reprojectedmomenthistory, "reprojected_moment_history");
+//		pass_moment_filter.set_texture_uniform(GL_TEXTURE_2D, init_normal_depth, "normal_depth");
+//
+//		pass_moment_filter.set_uniform_float("sigma_z", config.sigma_z);
+//		pass_moment_filter.set_uniform_float("sigma_n", config.sigma_n);
+//		pass_moment_filter.set_uniform_float("sigma_l", config.sigma_l);
+//
+//		pass_moment_filter.draw();
+////-------------------------------
+//
+//		pass_Atrous_filter.set_uniform_float("sigma_z", config.sigma_z);
+//		pass_Atrous_filter.set_uniform_float("sigma_n", config.sigma_n);
+//		pass_Atrous_filter.set_uniform_float("sigma_l", config.sigma_l);
+//
+//		for (int i = 0; i < config.num_atrous_iterations; i++) {
+//			pass_Atrous_filter.reset_texture_slot();
+//			pass_Atrous_filter.set_texture_uniform(GL_TEXTURE_2D, init_normal_depth, "normal_depth");
+//
+//			int step_size = 1 << i;
+//			pass_Atrous_filter.set_uniform_int("step_size", step_size);
+//
+//			if (i == 0) {
+//				pass_Atrous_filter.set_texture_uniform(GL_TEXTURE_2D, variance_filtered_color, "variance_computed_color");
+//			}
+//			else {
+//				pass_Atrous_filter.set_texture_uniform(GL_TEXTURE_2D, tmp_atrous_result, "variance_computed_color");
+//			}
+//			pass_Atrous_filter.draw();
+//
+//
+//			if (i == 1) {
+//				save_next_frame_pass.reset_texture_slot();
+//				save_next_frame_pass.set_texture_uniform(GL_TEXTURE_2D, atrous_flitered_color0, "in_texture");
+//				save_next_frame_pass.draw();
+//			}
+//
+//			bilt_pass.reset_texture_slot();
+//			bilt_pass.set_texture_uniform(GL_TEXTURE_2D, atrous_flitered_color0, "in_texture");
+//			bilt_pass.draw();
+//	
+//		}
+////-------------------------------
+//		pass_taa.reset_texture_slot();
+//		pass_taa.set_texture_uniform(GL_TEXTURE_2D, atrous_flitered_color0, "currentColor");
+//		pass_taa.set_texture_uniform(GL_TEXTURE_2D, last_color_taa, "previousColor");
+//		pass_taa.set_texture_uniform(GL_TEXTURE_2D, init_velocity, "velocityTexture");
+//		pass_taa.set_texture_uniform(GL_TEXTURE_2D, init_normal_depth, "normal_depth");
+//
+//		pass_taa.draw();
+////-------------------------------
+//
+//		pass_pre_info.reset_texture_slot();
+//
+//		pass_pre_info.set_texture_uniform(GL_TEXTURE_2D, next_frame_color_input, "texPass0");
+//		pass_pre_info.set_texture_uniform(GL_TEXTURE_2D, init_normal_depth, "texPass1");
+//		pass_pre_info.set_texture_uniform(GL_TEXTURE_2D, reprojectedmomenthistory, "texPass2");
+//		pass_pre_info.set_texture_uniform(GL_TEXTURE_2D, taa_output, "curTAAoutput");
+//		pass_pre_info.set_texture_uniform(GL_TEXTURE_2D, curColor, "curAccColor");
+//		
+//
+//		pass_pre_info.draw();
+
+//-------------------------------
+
+		//pass3.reset_texture_slot();
+		//if (debug_window.path_tracing_pic_1spp) {
+		//	pass3.set_texture_uniform(GL_TEXTURE_2D, curColor, "texPass0");
+		//}
+		//else if (debug_window.svgf_reprojected_pic) {
+		//	pass3.set_texture_uniform(GL_TEXTURE_2D, reprojectedColor, "texPass0");
+		//}
+		//else if (debug_window.final_pic) {
+		//	pass3.set_texture_uniform(GL_TEXTURE_2D, taa_output, "texPass0");
+		//}
+		//else if(debug_window.accumulate_color){
+		//	pass3.set_texture_uniform(GL_TEXTURE_2D, Albedo, "texPass0");
+		//	//last_acc_color
+		//}
+		//else {
+		//	pass3.set_texture_uniform(GL_TEXTURE_2D, taa_output, "texPass0");
+		//}
+
+		//pass3.draw();
 //--------------------------------
 		ImGui::Render();
 		ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
