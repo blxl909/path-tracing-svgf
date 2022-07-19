@@ -13,7 +13,7 @@ GLuint init_velocity;
 GLuint init_fwidth;
 
 GLuint curColor;
-GLuint curNormalDepth;
+GLuint Emission;
 GLuint Albedo;
 
 GLuint reprojectedColor;
@@ -29,7 +29,7 @@ GLuint next_frame_color_input;//same as lastColor
 
 GLuint taa_output;
 
-GLuint last_acc_color;
+
 GLuint lastColor;//atrous 的一级输出
 GLuint lastNormalDepth;
 GLuint lastMomentHistory;
@@ -73,7 +73,7 @@ int main(int argc, char** argv)
 	glfwSetCursorPosCallback(window, cursor_position_callback);
 	glfwSetScrollCallback(window, scroll_callback);
 	glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
-	
+
 
 
 
@@ -81,11 +81,11 @@ int main(int argc, char** argv)
 	IMGUI_CHECKVERSION();
 	ImGui::CreateContext();
 	ImGuiIO& io = ImGui::GetIO(); (void)io;
-	
+
 
 	// Setup Dear ImGui style
 	ImGui::StyleColorsDark();
-	
+
 
 	// Setup Platform/Renderer backends
 	ImGui_ImplGlfw_InitForOpenGL(window, true);
@@ -105,52 +105,24 @@ int main(int argc, char** argv)
 	glEnable(GL_DEPTH_TEST);
 	glEnable(GL_CULL_FACE);
 	glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
-	
+
 
 	std::vector<Triangle> triangles;
-	
+
 
 
 	int objIndex = 0;
 	std::vector<float> vertices;
 	// when number is under 0.0, that means we use texture to define it 
-	//Material m_clock;
-	//m_clock.roughness = -1.0;
-	//m_clock.specular = 0.0;//1.0
-	//m_clock.metallic = -1.0;//1.0
-	//m_clock.clearcoat = 0.0;//1.0
-	//m_clock.clearcoatGloss = 0.0;
-	//m_clock.baseColor = vec3(-1, -1, -1);
-	//
-	//readObj("models/clock.obj", vertices, triangles, m_clock, getTransformMatrix(vec3(0, 0, 0), vec3(0, 0, 0), vec3(1, 1, 1)), true, objIndex++);
-
-
-	Material m;
-	m.roughness = 0.5;
-	m.specular = 1.0;
-	m.metallic = 1.0;
-	m.clearcoat = 1.0;
-	m.clearcoatGloss = 0.0;
-	m.baseColor = vec3(1, 0.73, 0.25);
-	readObj("models/teapot.obj", vertices,triangles, m, getTransformMatrix(vec3(0, 0, 0), vec3(0, -0.5, 0), vec3(0.75, 0.75, 0.75)), true,objIndex++);
-
-
-	//Material m;
-	//m.roughness = 0.0;
-	//m.specular = 1.0;//1.0
-	//m.metallic = 1.0;//1.0
-	//m.clearcoat = 1.0;//1.0
-	//m.clearcoatGloss = 0.0;
-	//m.baseColor = vec3(0.75, 0.5, 0.75);
-	//readObj("models/teapot.obj", vertices, triangles, m, getTransformMatrix(vec3(0, 0, 0), vec3(0, 0, 0), vec3(1, 1, 1)), true, objIndex++);
-
-
-	m.roughness = 0.01;
-	m.metallic = 0.1;
-	m.specular = 1.0;
-	m.baseColor = vec3(1, 1, 1);
-	float len = 13000.0;
-	readObj("models/quad.obj", vertices, triangles, m, getTransformMatrix(vec3(0, 0, 0), vec3(0, -0.5, 0), vec3(len, 0.01, len)), false,objIndex++);
+	Material m_clock;
+	m_clock.roughness = -1.0;
+	m_clock.specular = 0.0;//1.0
+	m_clock.metallic = -1.0;//1.0
+	m_clock.clearcoat = 0.0;//1.0
+	m_clock.clearcoatGloss = 0.0;
+	m_clock.baseColor = vec3(-1, -1, -1);
+	
+	readObj("models/clock.obj", vertices, triangles, m_clock, getTransformMatrix(vec3(0, 0, 0), vec3(0, 0, 0), vec3(1, 1, 1)), true, objIndex++);
 
 
 	/*m.roughness = -1.0;
@@ -170,7 +142,7 @@ int main(int argc, char** argv)
 	testNode.AA = vec3(1, 1, 0);
 	testNode.BB = vec3(0, 1, 0);
 	std::vector<BVHNode> nodes{ testNode };
-	
+
 	buildBVHwithSAH(triangles, nodes, 0, triangles.size() - 1, 8);
 	int nNodes = nodes.size();
 	std::cout << "BVH 建立完成: 共 " << nNodes << " 个节点" << std::endl;
@@ -210,7 +182,7 @@ int main(int argc, char** argv)
 		nodes_encoded[i].BB = nodes[i].BB;
 	}
 
-	 
+
 
 	// 生成纹理
 
@@ -236,10 +208,10 @@ int main(int argc, char** argv)
 
 
 
-	/*pointLights.push_back(PointLight(vec3(0.5, 0.5, 0.5), vec3(10, 10, 10)));
+	pointLights.push_back(PointLight(vec3(0.5, 0.5, 0.5), vec3(10, 10, 10)));
 	pointLights.push_back(PointLight(vec3(-0.5, 0.75, 0.5), vec3(8, 4, 4)));
 	pointLights.push_back(PointLight(vec3(-0.5, 0.75, 0.75), vec3(0, 3, 4)));
-	pointLights.push_back(PointLight(vec3(0.75, 0.75, 0.75), vec3(12, 3, 4)));*/
+	pointLights.push_back(PointLight(vec3(0.75, 0.75, 0.75), vec3(12, 3, 4)));
 	//point light tbo
 	GLuint tbo2;
 	glGenBuffers(1, &tbo2);
@@ -262,8 +234,8 @@ int main(int argc, char** argv)
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB32F, hdrRes.width, hdrRes.height, 0, GL_RGB, GL_FLOAT, cache);
 	hdrResolution = hdrRes.width;
 
-//----------------------
-	//load material
+	//----------------------
+		//load material
 
 	GLuint materials_array;
 	glGenTextures(1, &materials_array);
@@ -289,12 +261,12 @@ int main(int argc, char** argv)
 	load_texture_to_material_array("Textures/plant_roughness.bmp", slot_index++);
 
 
-	
-//----------------------
+
+	//----------------------
 
 	pass3.program = getShaderProgram("./shaders/pass3.frag", "./shaders/vshader.vsh");
 	pass3.bindData(true);
-//-----------------------
+	//-----------------------
 	init_pass.program = getShaderProgram("./shaders/normalfshader.frag", "./shaders/normalvshader.vsh");
 
 	init_world_position = getTextureRGB32F(init_pass.width, init_pass.height);
@@ -314,18 +286,18 @@ int main(int argc, char** argv)
 	glUniform1i(glGetUniformLocation(init_pass.program, "screen_height"), SCR_HEIGHT);
 	glUseProgram(0);
 
-//--------------------
+	//--------------------
 	pass_path_tracing.program = getShaderProgram("./shaders/path_tracing.frag", "./shaders/vshader.vsh");
 
 	curColor = getTextureRGB32F(pass_path_tracing.width, pass_path_tracing.height);
-	curNormalDepth = getTextureRGB32F(pass_path_tracing.width, pass_path_tracing.height);
+	Emission = getTextureRGB32F(pass_path_tracing.width, pass_path_tracing.height);
 	Albedo = getTextureRGB32F(pass_path_tracing.width, pass_path_tracing.height);
-	
+
 
 	pass_path_tracing.colorAttachments.push_back(curColor);
-	pass_path_tracing.colorAttachments.push_back(curNormalDepth);
+	pass_path_tracing.colorAttachments.push_back(Emission);
 	pass_path_tracing.colorAttachments.push_back(Albedo);
-	
+
 
 	pass_path_tracing.bindData(false);
 
@@ -337,55 +309,19 @@ int main(int argc, char** argv)
 	glUniform1i(glGetUniformLocation(pass_path_tracing.program, "pointLightSize"), pointLights.size());
 	glUseProgram(0);
 
-//---------------------------------------
+	
 
-	pass2.program = getShaderProgram("./shaders/svgf_reproject.frag", "./shaders/vshader.vsh");
-	reprojectedColor = getTextureRGB32F(pass2.width, pass2.height);
-	reprojectedmomenthistory = getTextureRGB32F(pass2.width, pass2.height);
-	pass2.colorAttachments.push_back(reprojectedColor);
-	pass2.colorAttachments.push_back(reprojectedmomenthistory);
-
-	pass2.bindData(false);
-
-	glUseProgram(pass2.program);
-	glUniform1i(glGetUniformLocation(pass2.program, "screen_width"), SCR_WIDTH);
-	glUniform1i(glGetUniformLocation(pass2.program, "screen_height"), SCR_HEIGHT);
-	glUseProgram(0);
-//----------------------------
-	pass_moment_filter.program = getShaderProgram("./shaders/svgf_variance.frag", "./shaders/vshader.vsh");
-	variance_filtered_color = getTextureRGB32F(pass_moment_filter.width, pass_moment_filter.height);
-	pass_moment_filter.colorAttachments.push_back(variance_filtered_color);
-
-	pass_moment_filter.bindData(false);
-
-	glUseProgram(pass_moment_filter.program);
-	glUniform1i(glGetUniformLocation(pass_moment_filter.program, "screen_width"), SCR_WIDTH);
-	glUniform1i(glGetUniformLocation(pass_moment_filter.program, "screen_height"), SCR_HEIGHT);
-	glUseProgram(0);
-
-//----------------------------
-	pass_Atrous_filter.program = getShaderProgram("./shaders/svgf_Atrous.frag", "./shaders/vshader.vsh");
-	atrous_flitered_color0 = getTextureRGB32F(pass_Atrous_filter.width, pass_Atrous_filter.height);
-	pass_Atrous_filter.colorAttachments.push_back(atrous_flitered_color0);
-	pass_Atrous_filter.bindData(false);
-
-	glUseProgram(pass_Atrous_filter.program);
-	glUniform1i(glGetUniformLocation(pass_Atrous_filter.program, "screen_width"), SCR_WIDTH);
-	glUniform1i(glGetUniformLocation(pass_Atrous_filter.program, "screen_height"), SCR_HEIGHT);
-
-	glUseProgram(0);
-
-//----------------------------
+	//----------------------------
 	bilt_pass.program = getShaderProgram("./shaders/bilt.frag", "./shaders/vshader.vsh");
 	tmp_atrous_result = getTextureRGB32F(bilt_pass.width, bilt_pass.height);
 	bilt_pass.colorAttachments.push_back(tmp_atrous_result);
 	bilt_pass.bindData(false);
-//----------------------------
+	//----------------------------
 	save_next_frame_pass.program = getShaderProgram("./shaders/bilt.frag", "./shaders/vshader.vsh");
 	next_frame_color_input = getTextureRGB32F(save_next_frame_pass.width, save_next_frame_pass.height);
 	save_next_frame_pass.colorAttachments.push_back(next_frame_color_input);
 	save_next_frame_pass.bindData(false);
-//----------------------------
+	//----------------------------
 	pass_taa.program = getShaderProgram("./shaders/taa.frag", "./shaders/vshader.vsh");
 	taa_output = getTextureRGB32F(pass_taa.width, pass_taa.height);
 	pass_taa.colorAttachments.push_back(taa_output);
@@ -395,46 +331,30 @@ int main(int argc, char** argv)
 	glUniform1i(glGetUniformLocation(pass_taa.program, "screen_width"), SCR_WIDTH);
 	glUniform1i(glGetUniformLocation(pass_taa.program, "screen_height"), SCR_HEIGHT);
 	glUseProgram(0);
-//----------------------------
-	pass_pre_info.program = getShaderProgram("./shaders/passlastframe.frag", "./shaders/vshader.vsh");
-	lastColor = getTextureRGB32F(pass_pre_info.width, pass_pre_info.height);
-	lastNormalDepth = getTextureRGB32F(pass_pre_info.width, pass_pre_info.height);
-	lastMomentHistory = getTextureRGB32F(pass_pre_info.width, pass_pre_info.height);
-	last_color_taa = getTextureRGB32F(pass_pre_info.width, pass_pre_info.height);
-	last_acc_color = getTextureRGB32F(pass_pre_info.width, pass_pre_info.height);
-
-	pass_pre_info.colorAttachments.push_back(lastColor);
-	pass_pre_info.colorAttachments.push_back(lastNormalDepth);
-	pass_pre_info.colorAttachments.push_back(lastMomentHistory);
-	pass_pre_info.colorAttachments.push_back(last_color_taa);
-	pass_pre_info.colorAttachments.push_back(last_acc_color);
-
-	pass_pre_info.bindData(false);
-
-//----------------------------------------
-//----------------------------------------
-//----------------------------------------
+	//----------------------------------------
+	//----------------------------------------
 
 	RenderPass next_frame_input;
 
-	next_frame_input.program = getShaderProgram("./shaders/save_frame_date.frag", "./shaders/vshader.vsh");
+	next_frame_input.program = getShaderProgram("./shaders/save_frame_data.frag", "./shaders/vshader.vsh");
 
 	GLuint lastIllumination = getTextureRGB32F(next_frame_input.width, next_frame_input.height);
 	GLuint last_normal_depth = getTextureRGB32F(next_frame_input.width, next_frame_input.height);
 	GLuint last_Moments_HistoryLength = getTextureRGB32F(next_frame_input.width, next_frame_input.height);
-	
+	GLuint last_acc_color = getTextureRGB32F(next_frame_input.width, next_frame_input.height);
 	next_frame_input.colorAttachments.push_back(lastIllumination);
 	next_frame_input.colorAttachments.push_back(last_normal_depth);
 	next_frame_input.colorAttachments.push_back(last_Moments_HistoryLength);
+	next_frame_input.colorAttachments.push_back(last_acc_color);
 
 	next_frame_input.bindData(false);
 
-	
 
-//----------------------------------------
+
+	//----------------------------------------
 	RenderPass new_project_pass;
 	new_project_pass.program = getShaderProgram("./shaders/svgf_reproject.frag", "./shaders/vshader.vsh");
-	GLuint curIllumination= getTextureRGB32F(new_project_pass.width, new_project_pass.height);
+	GLuint curIllumination = getTextureRGB32F(new_project_pass.width, new_project_pass.height);
 	GLuint curMomentHistory = getTextureRGB32F(new_project_pass.width, new_project_pass.height);
 
 	new_project_pass.colorAttachments.push_back(curIllumination);
@@ -445,7 +365,7 @@ int main(int argc, char** argv)
 	new_project_pass.set_uniform_float("inv_screen_width", 1.0 / camera.width);
 	new_project_pass.set_uniform_float("inv_screen_height", 1.0 / camera.height);
 
-//------------------------------------
+	//------------------------------------
 	RenderPass new_variance_pass;
 	new_variance_pass.program = getShaderProgram("./shaders/svgf_variance.frag", "./shaders/vshader.vsh");
 	GLuint variance_compute_illumination = getTextureRGB32F(new_variance_pass.width, new_variance_pass.height);
@@ -455,7 +375,7 @@ int main(int argc, char** argv)
 	new_variance_pass.set_uniform_float("inv_screen_width", 1.0 / camera.width);
 	new_variance_pass.set_uniform_float("inv_screen_height", 1.0 / camera.height);
 
-//------------------------------------
+	//------------------------------------
 	RenderPass new_atrous_pass;
 	new_atrous_pass.program = getShaderProgram("./shaders/svgf_Atrous.frag", "./shaders/vshader.vsh");
 	GLuint atrous_output = getTextureRGB32F(new_atrous_pass.width, new_atrous_pass.height);
@@ -465,15 +385,23 @@ int main(int argc, char** argv)
 	new_atrous_pass.set_uniform_float("inv_screen_width", 1.0 / camera.width);
 	new_atrous_pass.set_uniform_float("inv_screen_height", 1.0 / camera.height);
 
-//------------------------------------
+	//-----------------------------------
+	RenderPass svgf_modulate_pass;
+	svgf_modulate_pass.program = getShaderProgram("./shaders/svgf_modulate.frag", "./shaders/vshader.vsh");
+	GLuint modulate_color = getTextureRGB32F(svgf_modulate_pass.width, svgf_modulate_pass.height);
+	svgf_modulate_pass.colorAttachments.push_back(modulate_color);
+
+	svgf_modulate_pass.bindData(false);
+
+	//------------------------------------
 	RenderPass output_pass;
-	output_pass.program= getShaderProgram("./shaders/pass3.frag", "./shaders/vshader.vsh");
+	output_pass.program = getShaderProgram("./shaders/pass3.frag", "./shaders/vshader.vsh");
 	output_pass.bindData(true);
 
 
-//----------------------------------------
-//----------------------------------------
-//----------------------------
+	//----------------------------------------
+	//----------------------------------------
+	//----------------------------
 	bool use_normal_texture = false;
 	debug_gui debug_window;
 	parameter_config config;
@@ -490,7 +418,7 @@ int main(int argc, char** argv)
 		deltaTime = currentFrame - lastFrame;
 		lastFrame = currentFrame;
 
-		
+
 		camera.update(window, deltaTime);
 
 		glm::mat4 view = camera.cam_view_mat;
@@ -504,18 +432,19 @@ int main(int argc, char** argv)
 			ImGui::Begin("parameter settings");
 			ImGui::Text("control parameter during passes.");
 
-			ImGui::SliderFloat("reporject_depth_threshold", &config.reproj_depth_threshold, 0.0f, 1.0f);
-			ImGui::SliderFloat("reporject_normal_threshold", &config.reproj_normal_threshold, 0.0f, 1.0f);
-			
+			/*ImGui::SliderFloat("reporject_depth_threshold", &config.reproj_depth_threshold, 0.0f, 1.0f);
+			ImGui::SliderFloat("reporject_normal_threshold", &config.reproj_normal_threshold, 0.0f, 1.0f);*/
+
 			ImGui::SliderFloat("color_clamp_threshold", &config.clamp_threshold, 1.0f, 10.0f);
 			ImGui::SliderInt("max_tracing_depth", &config.max_tracing_depth, 1, 6);
 
-			ImGui::SliderFloat("sigma_z", &config.sigma_z, 0.1f, 5.0f);
+			//ImGui::SliderFloat("sigma_z", &config.sigma_z, 0.1f, 5.0f);
+			ImGui::Text("sigma_z is calculated automatically in shader.");
 			ImGui::SliderFloat("sigma_n", &config.sigma_n, 50.0f, 200.0f);
 			ImGui::SliderFloat("sigma_l", &config.sigma_l, 1.0f, 10.0f);
 
 			ImGui::SliderInt("num_atrous_iterations", &config.num_atrous_iterations, 2, 8);
-			
+
 			ImGui::End();
 		}
 
@@ -541,11 +470,11 @@ int main(int argc, char** argv)
 				camera.frameCounter = 0;
 				debug_window.update_debug_state(debug_view_type::accumulate_color);
 			}
-			
+			ImGui::Text("normal texture will only have meaning when actually have normal texture");
 			if (ImGui::Checkbox("use_normal_texture", &use_normal_texture)) {
 				camera.frameCounter = 0;
 			}
-				
+			
 
 			//ImGui::SliderFloat("float", &f, 0.0f, 1.0f);            // Edit 1 float using a slider from 0.0f to 1.0f
 			//ImGui::ColorEdit3("clear color", (float*)&clear_color); // Edit 3 floats representing a color
@@ -558,7 +487,7 @@ int main(int argc, char** argv)
 			ImGui::End();
 		}
 
-		
+
 
 
 		glUseProgram(init_pass.program);
@@ -569,7 +498,7 @@ int main(int argc, char** argv)
 		glUniform1ui(glGetUniformLocation(init_pass.program, "frameCounter"), camera.frameCounter);
 
 		init_pass.draw();
-//-------------------------------------------
+		//-------------------------------------------
 		mat4 cameraRotate = inverse(camera.cam_view_mat);
 
 		pass_path_tracing.set_uniform_vec3("eye", camera.cam_position);
@@ -584,7 +513,7 @@ int main(int argc, char** argv)
 		pass_path_tracing.reset_texture_slot();
 		pass_path_tracing.set_texture_uniform(GL_TEXTURE_BUFFER, trianglesTextureBuffer, "triangles");
 		pass_path_tracing.set_texture_uniform(GL_TEXTURE_BUFFER, nodesTextureBuffer, "nodes");
-	
+
 		if (debug_window.accumulate_color) {
 			pass_path_tracing.set_texture_uniform(GL_TEXTURE_2D, last_acc_color, "lastFrame");
 		}
@@ -598,18 +527,19 @@ int main(int argc, char** argv)
 		pass_path_tracing.draw();
 
 
-//------------------------------
+		//------------------------------
 		new_project_pass.reset_texture_slot();
 		new_project_pass.set_texture_uniform(GL_TEXTURE_2D, init_velocity, "gMotion");
 		new_project_pass.set_texture_uniform(GL_TEXTURE_2D, curColor, "gColor");
 		new_project_pass.set_texture_uniform(GL_TEXTURE_2D, Albedo, "gAlbedo");
+		new_project_pass.set_texture_uniform(GL_TEXTURE_2D, Emission, "gEmission");
 		new_project_pass.set_texture_uniform(GL_TEXTURE_2D, lastIllumination, "gPrevIllum");
 		new_project_pass.set_texture_uniform(GL_TEXTURE_2D, last_Moments_HistoryLength, "gPrevMoments_HistoryLength");
 		new_project_pass.set_texture_uniform(GL_TEXTURE_2D, init_normal_depth, "gNormalAndLinearZ");
 		new_project_pass.set_texture_uniform(GL_TEXTURE_2D, last_normal_depth, "gPrevNormalAndLinearZ");
 		new_project_pass.set_texture_uniform(GL_TEXTURE_2D, init_fwidth, "gNormalDepthFwidth");
 		new_project_pass.draw();
-//-------------------------------
+		//-------------------------------
 		new_variance_pass.reset_texture_slot();
 		new_variance_pass.set_uniform_float("gPhiColor", config.sigma_l);
 		new_variance_pass.set_uniform_float("gPhiNormal", config.sigma_n);
@@ -619,7 +549,7 @@ int main(int argc, char** argv)
 		new_variance_pass.set_texture_uniform(GL_TEXTURE_2D, init_fwidth, "gNormalDepthFwidth");
 		new_variance_pass.draw();
 
-//-------------------------------
+		//-------------------------------
 
 		for (int i = 0; i < config.num_atrous_iterations; i++) {
 			new_atrous_pass.reset_texture_slot();
@@ -651,125 +581,46 @@ int main(int argc, char** argv)
 		}
 
 
-//-------------------------------
+		//-------------------------------
 		next_frame_input.reset_texture_slot();
 		next_frame_input.set_texture_uniform(GL_TEXTURE_2D, next_frame_color_input, "texPass0");
 		next_frame_input.set_texture_uniform(GL_TEXTURE_2D, init_normal_depth, "texPass1");
 		next_frame_input.set_texture_uniform(GL_TEXTURE_2D, curMomentHistory, "texPass2");
+		next_frame_input.set_texture_uniform(GL_TEXTURE_2D, curColor, "accColor");
 
-		next_frame_input.draw(); 
-//-----------------------------------
+		next_frame_input.draw();
+		//-----------------------------------
+		svgf_modulate_pass.reset_texture_slot();
+		svgf_modulate_pass.set_texture_uniform(GL_TEXTURE_2D, Albedo, "gAlbedo");
+		svgf_modulate_pass.set_texture_uniform(GL_TEXTURE_2D, Emission, "gEmission");
+		svgf_modulate_pass.set_texture_uniform(GL_TEXTURE_2D, atrous_output, "gIllumination");
+		svgf_modulate_pass.set_texture_uniform(GL_TEXTURE_2D, init_normal_depth, "gNormalAndLinearZ");
+		svgf_modulate_pass.draw();
+		//-----------------------------------
 		output_pass.reset_texture_slot();
-		output_pass.set_texture_uniform(GL_TEXTURE_2D, atrous_output, "texPass0");
+		if (debug_window.accumulate_color) {
+			output_pass.set_texture_uniform(GL_TEXTURE_2D, curColor, "texPass0");
+		}
+		else if (debug_window.final_pic) {
+			output_pass.set_texture_uniform(GL_TEXTURE_2D, modulate_color, "texPass0");
+		}
+		else if(debug_window.svgf_reprojected_pic)
+		{
+			output_pass.set_texture_uniform(GL_TEXTURE_2D, curIllumination, "texPass0");
+		}
+		else if (debug_window.svgf_variance_pic) {
+			output_pass.set_texture_uniform(GL_TEXTURE_2D, variance_compute_illumination, "texPass0");
+		}
+		else if (debug_window.svg_atrous_pic) {
+			output_pass.set_texture_uniform(GL_TEXTURE_2D, modulate_color, "texPass0");
+		}
+		else if (debug_window.path_tracing_pic_1spp) {
+			output_pass.set_texture_uniform(GL_TEXTURE_2D, curColor, "texPass0");
+		}
+		
 		output_pass.draw();
-//-------------------------------
+		//-------------------------------
 
-//		pass2.reset_texture_slot();
-//		pass2.set_texture_uniform(GL_TEXTURE_2D, curColor, "texPass0");
-//		pass2.set_texture_uniform(GL_TEXTURE_2D, init_normal_depth, "texPass1");
-//		pass2.set_texture_uniform(GL_TEXTURE_2D, init_world_position, "texPass2");
-//		pass2.set_texture_uniform(GL_TEXTURE_2D, lastNormalDepth, "lastNormalDepth");
-//		pass2.set_texture_uniform(GL_TEXTURE_2D, lastColor, "lastColor");
-//		pass2.set_texture_uniform(GL_TEXTURE_2D, lastMomentHistory, "lastMomentHistory");
-//
-//		pass2.set_uniform_float("depth_threshold", config.reproj_depth_threshold);
-//		pass2.set_uniform_float("normal_threshold", config.reproj_normal_threshold);
-//
-//		/*glActiveTexture(GL_TEXTURE6);
-//		glBindTexture(GL_TEXTURE_2D, init_velocity);
-//		glUniform1i(glGetUniformLocation(pass2.program, "velocity"), 6);*/
-//
-//		pass2.set_uniform_mat4("pre_viewproj", pre_viewproj);
-//
-//		pass2.draw();
-////-------------------------------
-//
-//		pass_moment_filter.reset_texture_slot();
-//		pass_moment_filter.set_texture_uniform(GL_TEXTURE_2D, reprojectedColor, "reprojected_color");
-//		pass_moment_filter.set_texture_uniform(GL_TEXTURE_2D, reprojectedmomenthistory, "reprojected_moment_history");
-//		pass_moment_filter.set_texture_uniform(GL_TEXTURE_2D, init_normal_depth, "normal_depth");
-//
-//		pass_moment_filter.set_uniform_float("sigma_z", config.sigma_z);
-//		pass_moment_filter.set_uniform_float("sigma_n", config.sigma_n);
-//		pass_moment_filter.set_uniform_float("sigma_l", config.sigma_l);
-//
-//		pass_moment_filter.draw();
-////-------------------------------
-//
-//		pass_Atrous_filter.set_uniform_float("sigma_z", config.sigma_z);
-//		pass_Atrous_filter.set_uniform_float("sigma_n", config.sigma_n);
-//		pass_Atrous_filter.set_uniform_float("sigma_l", config.sigma_l);
-//
-//		for (int i = 0; i < config.num_atrous_iterations; i++) {
-//			pass_Atrous_filter.reset_texture_slot();
-//			pass_Atrous_filter.set_texture_uniform(GL_TEXTURE_2D, init_normal_depth, "normal_depth");
-//
-//			int step_size = 1 << i;
-//			pass_Atrous_filter.set_uniform_int("step_size", step_size);
-//
-//			if (i == 0) {
-//				pass_Atrous_filter.set_texture_uniform(GL_TEXTURE_2D, variance_filtered_color, "variance_computed_color");
-//			}
-//			else {
-//				pass_Atrous_filter.set_texture_uniform(GL_TEXTURE_2D, tmp_atrous_result, "variance_computed_color");
-//			}
-//			pass_Atrous_filter.draw();
-//
-//
-//			if (i == 1) {
-//				save_next_frame_pass.reset_texture_slot();
-//				save_next_frame_pass.set_texture_uniform(GL_TEXTURE_2D, atrous_flitered_color0, "in_texture");
-//				save_next_frame_pass.draw();
-//			}
-//
-//			bilt_pass.reset_texture_slot();
-//			bilt_pass.set_texture_uniform(GL_TEXTURE_2D, atrous_flitered_color0, "in_texture");
-//			bilt_pass.draw();
-//	
-//		}
-////-------------------------------
-//		pass_taa.reset_texture_slot();
-//		pass_taa.set_texture_uniform(GL_TEXTURE_2D, atrous_flitered_color0, "currentColor");
-//		pass_taa.set_texture_uniform(GL_TEXTURE_2D, last_color_taa, "previousColor");
-//		pass_taa.set_texture_uniform(GL_TEXTURE_2D, init_velocity, "velocityTexture");
-//		pass_taa.set_texture_uniform(GL_TEXTURE_2D, init_normal_depth, "normal_depth");
-//
-//		pass_taa.draw();
-////-------------------------------
-//
-//		pass_pre_info.reset_texture_slot();
-//
-//		pass_pre_info.set_texture_uniform(GL_TEXTURE_2D, next_frame_color_input, "texPass0");
-//		pass_pre_info.set_texture_uniform(GL_TEXTURE_2D, init_normal_depth, "texPass1");
-//		pass_pre_info.set_texture_uniform(GL_TEXTURE_2D, reprojectedmomenthistory, "texPass2");
-//		pass_pre_info.set_texture_uniform(GL_TEXTURE_2D, taa_output, "curTAAoutput");
-//		pass_pre_info.set_texture_uniform(GL_TEXTURE_2D, curColor, "curAccColor");
-//		
-//
-//		pass_pre_info.draw();
-
-//-------------------------------
-
-		//pass3.reset_texture_slot();
-		//if (debug_window.path_tracing_pic_1spp) {
-		//	pass3.set_texture_uniform(GL_TEXTURE_2D, curColor, "texPass0");
-		//}
-		//else if (debug_window.svgf_reprojected_pic) {
-		//	pass3.set_texture_uniform(GL_TEXTURE_2D, reprojectedColor, "texPass0");
-		//}
-		//else if (debug_window.final_pic) {
-		//	pass3.set_texture_uniform(GL_TEXTURE_2D, taa_output, "texPass0");
-		//}
-		//else if(debug_window.accumulate_color){
-		//	pass3.set_texture_uniform(GL_TEXTURE_2D, Albedo, "texPass0");
-		//	//last_acc_color
-		//}
-		//else {
-		//	pass3.set_texture_uniform(GL_TEXTURE_2D, taa_output, "texPass0");
-		//}
-
-		//pass3.draw();
-//--------------------------------
 		ImGui::Render();
 		ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
@@ -841,5 +692,4 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height)
 	glViewport(0, 0, width, height);
 	camera.dirty = true;
 }
-
 

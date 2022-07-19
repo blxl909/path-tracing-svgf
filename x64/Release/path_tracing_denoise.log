@@ -15,30 +15,28 @@ C:\Users\86135\Desktop\GPU_raytracing\main.h(423,10): warning C4244: “初始�
 C:\Users\86135\Desktop\GPU_raytracing\main.h(463,1): warning C4267: “=”: 从“size_t”转换到“int”，可能丢失数据
 C:\Users\86135\Desktop\GPU_raytracing\main.h(492,1): warning C4267: “参数”: 从“size_t”转换到“GLsizei”，可能丢失数据
 C:\Users\86135\Desktop\GPU_raytracing\main.h(557,1): warning C4267: “参数”: 从“size_t”转换到“GLsizei”，可能丢失数据
-C:\Users\86135\Desktop\GPU_raytracing\main.cpp(148,20): warning C4305: “=”: 从“double”到“float”截断
-C:\Users\86135\Desktop\GPU_raytracing\main.cpp(149,18): warning C4305: “=”: 从“double”到“float”截断
-C:\Users\86135\Desktop\GPU_raytracing\main.cpp(162,35): warning C4267: “初始化”: 从“size_t”转换到“int”，可能丢失数据
-C:\Users\86135\Desktop\GPU_raytracing\main.cpp(174,62): warning C4267: “参数”: 从“size_t”转换到“int”，可能丢失数据
-C:\Users\86135\Desktop\GPU_raytracing\main.cpp(175,27): warning C4267: “初始化”: 从“size_t”转换到“int”，可能丢失数据
-C:\Users\86135\Desktop\GPU_raytracing\main.cpp(333,93): warning C4267: “参数”: 从“size_t”转换到“GLint”，可能丢失数据
-C:\Users\86135\Desktop\GPU_raytracing\main.cpp(334,85): warning C4267: “参数”: 从“size_t”转换到“GLint”，可能丢失数据
-C:\Users\86135\Desktop\GPU_raytracing\main.cpp(337,99): warning C4267: “参数”: 从“size_t”转换到“GLint”，可能丢失数据
-C:\Users\86135\Desktop\GPU_raytracing\main.cpp(445,61): warning C4244: “参数”: 从“double”转换到“float”，可能丢失数据
-C:\Users\86135\Desktop\GPU_raytracing\main.cpp(446,62): warning C4244: “参数”: 从“double”转换到“float”，可能丢失数据
-C:\Users\86135\Desktop\GPU_raytracing\main.cpp(455,62): warning C4244: “参数”: 从“double”转换到“float”，可能丢失数据
-C:\Users\86135\Desktop\GPU_raytracing\main.cpp(456,63): warning C4244: “参数”: 从“double”转换到“float”，可能丢失数据
-C:\Users\86135\Desktop\GPU_raytracing\main.cpp(465,60): warning C4244: “参数”: 从“double”转换到“float”，可能丢失数据
-C:\Users\86135\Desktop\GPU_raytracing\main.cpp(466,61): warning C4244: “参数”: 从“double”转换到“float”，可能丢失数据
-C:\Users\86135\Desktop\GPU_raytracing\main.cpp(802,57): warning C4244: “+=”: 从“double”转换到“float”，可能丢失数据
-C:\Users\86135\Desktop\GPU_raytracing\main.cpp(803,55): warning C4244: “+=”: 从“double”转换到“float”，可能丢失数据
-C:\Users\86135\Desktop\GPU_raytracing\main.cpp(806,12): warning C4244: “=”: 从“double”转换到“float”，可能丢失数据
-C:\Users\86135\Desktop\GPU_raytracing\main.cpp(806,23): warning C4244: “=”: 从“double”转换到“float”，可能丢失数据
-C:\Users\86135\Desktop\GPU_raytracing\main.cpp(821,12): warning C4244: “=”: 从“double”转换到“float”，可能丢失数据
-C:\Users\86135\Desktop\GPU_raytracing\main.cpp(821,26): warning C4244: “=”: 从“double”转换到“float”，可能丢失数据
-C:\Users\86135\Desktop\GPU_raytracing\main.cpp(832,29): warning C4244: “+=”: 从“double”转换到“float”，可能丢失数据
+C:\Users\86135\Desktop\GPU_raytracing\main.cpp(134,35): warning C4267: “初始化”: 从“size_t”转换到“int”，可能丢失数据
+C:\Users\86135\Desktop\GPU_raytracing\main.cpp(146,62): warning C4267: “参数”: 从“size_t”转换到“int”，可能丢失数据
+C:\Users\86135\Desktop\GPU_raytracing\main.cpp(147,27): warning C4267: “初始化”: 从“size_t”转换到“int”，可能丢失数据
+C:\Users\86135\Desktop\GPU_raytracing\main.cpp(305,93): warning C4267: “参数”: 从“size_t”转换到“GLint”，可能丢失数据
+C:\Users\86135\Desktop\GPU_raytracing\main.cpp(306,85): warning C4267: “参数”: 从“size_t”转换到“GLint”，可能丢失数据
+C:\Users\86135\Desktop\GPU_raytracing\main.cpp(309,99): warning C4267: “参数”: 从“size_t”转换到“GLint”，可能丢失数据
+C:\Users\86135\Desktop\GPU_raytracing\main.cpp(365,61): warning C4244: “参数”: 从“double”转换到“float”，可能丢失数据
+C:\Users\86135\Desktop\GPU_raytracing\main.cpp(366,62): warning C4244: “参数”: 从“double”转换到“float”，可能丢失数据
+C:\Users\86135\Desktop\GPU_raytracing\main.cpp(375,62): warning C4244: “参数”: 从“double”转换到“float”，可能丢失数据
+C:\Users\86135\Desktop\GPU_raytracing\main.cpp(376,63): warning C4244: “参数”: 从“double”转换到“float”，可能丢失数据
+C:\Users\86135\Desktop\GPU_raytracing\main.cpp(385,60): warning C4244: “参数”: 从“double”转换到“float”，可能丢失数据
+C:\Users\86135\Desktop\GPU_raytracing\main.cpp(386,61): warning C4244: “参数”: 从“double”转换到“float”，可能丢失数据
+C:\Users\86135\Desktop\GPU_raytracing\main.cpp(653,57): warning C4244: “+=”: 从“double”转换到“float”，可能丢失数据
+C:\Users\86135\Desktop\GPU_raytracing\main.cpp(654,55): warning C4244: “+=”: 从“double”转换到“float”，可能丢失数据
+C:\Users\86135\Desktop\GPU_raytracing\main.cpp(657,12): warning C4244: “=”: 从“double”转换到“float”，可能丢失数据
+C:\Users\86135\Desktop\GPU_raytracing\main.cpp(657,23): warning C4244: “=”: 从“double”转换到“float”，可能丢失数据
+C:\Users\86135\Desktop\GPU_raytracing\main.cpp(672,12): warning C4244: “=”: 从“double”转换到“float”，可能丢失数据
+C:\Users\86135\Desktop\GPU_raytracing\main.cpp(672,26): warning C4244: “=”: 从“double”转换到“float”，可能丢失数据
+C:\Users\86135\Desktop\GPU_raytracing\main.cpp(683,29): warning C4244: “+=”: 从“double”转换到“float”，可能丢失数据
   正在生成代码
-  1 of 2524 functions (<0.1%) were compiled, the rest were copied from previous compilation.
+  1 of 2551 functions (<0.1%) were compiled, the rest were copied from previous compilation.
     0 functions were new in current compilation
-    29 functions had inline decision re-evaluated but remain unchanged
+    22 functions had inline decision re-evaluated but remain unchanged
   已完成代码的生成
   path_tracing_denoise.vcxproj -> C:\Users\86135\Desktop\GPU_raytracing\x64\Release\path_tracing_denoise.exe

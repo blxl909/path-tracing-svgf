@@ -4,7 +4,7 @@
 in vec3 pix;
 //out vec4 fragColor;
 layout (location = 0) out vec4 fragColor;
-layout (location = 1) out vec4 worldNormal_screenDepth;
+layout (location = 1) out vec4 Emission;
 layout (location = 2) out vec4 Albedo;
 
 // ----------------------------------------------------------------------------- //
@@ -1053,18 +1053,15 @@ void main() {
 
  //------------------------------   
     // 和上一帧混合
-    //if(accumulate){
-    //    vec3 lastColor = texture2D(lastFrame, pix.xy*0.5+0.5).rgb;
-    //    color = mix(lastColor, color, 1.0/float(frameCounter+1u));
-    //}
+    if(accumulate){
+        vec3 lastColor = texture2D(lastFrame, pix.xy*0.5+0.5).rgb;
+        color = mix(lastColor, color, 1.0/float(frameCounter+1u));
+    }
     
 
 
     fragColor=vec4(color,1.0);
-
-
-    //worldNormal_screenDepth = vec4(worldNormal,screenDepth);
-    worldNormal_screenDepth = vec4(1);
+    Emission = vec4(firstHit.material.emissive,1.0);
     Albedo = vec4(firstHit.material.baseColor,1.0);
     
     
