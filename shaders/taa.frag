@@ -126,11 +126,15 @@ void main(){
     if(frameCounter == 0u)
     {
         outColor = vec4(nowColor, 1.0);
-        
+        return;
+    }
+    float depth = texture2D(normal_depth,screenPosition).w;
+    if(depth==1.0){
+        outColor = vec4(nowColor, 1.0);
         return;
     }
 
-    // ÖÜÎ§3x3ÄÚ¾àÀë×î½üµÄËÙ¶ÈÏòÁ¿
+    // ï¿½ï¿½Î§3x3ï¿½Ú¾ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ù¶ï¿½ï¿½ï¿½ï¿½ï¿½
     vec2 velocity = texture(velocityTexture, getClosestOffset()).rg;
     vec2 offsetUV = clamp(screenPosition - velocity, 0, 1);
     vec3 preColor = texture(previousColor, offsetUV).rgb;
@@ -143,7 +147,7 @@ void main(){
     preColor = UnToneMap(YCoCgR2RGB(preColor));
     nowColor = UnToneMap(YCoCgR2RGB(nowColor));
 
-    float c = 0.05f;
+    float c = 0.1f;
     outColor = vec4(c * nowColor + (1-c) * preColor, 1.0);
     
 

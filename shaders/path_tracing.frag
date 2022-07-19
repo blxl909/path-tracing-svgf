@@ -35,6 +35,17 @@ uniform float clamp_threshold;
 uniform int max_tracing_depth;
  
 
+const vec2 Halton_2_3[8] = vec2[](
+    vec2(0.0f, -1.0f / 3.0f),
+    vec2(-1.0f / 2.0f, 1.0f / 3.0f),
+    vec2(1.0f / 2.0f, -7.0f / 9.0f),
+    vec2(-3.0f / 4.0f, -1.0f / 9.0f),
+    vec2(1.0f / 4.0f, 5.0f / 9.0f),
+    vec2(-1.0f / 4.0f, -5.0f / 9.0f),
+    vec2(3.0f / 4.0f, 1.0f / 9.0f),
+    vec2(-7.0f / 8.0f, 7.0f / 9.0f)
+    );
+
 // ----------------------------------------------------------------------------- //
 
 #define PI              3.1415926
@@ -986,8 +997,16 @@ void main() {
     
     ray.startPoint = eye;
     vec2 AA = vec2((rand()-0.5)/float(width), (rand()-0.5)/float(height));
+
+    //uint offsetIdx = frameCounter % 8u;
+    //float deltaWidth = 1.0 / width, deltaHeight = 1.0 / height;
+    //vec2 jitter = vec2(
+    //    Halton_2_3[offsetIdx].x * deltaWidth,
+    //    Halton_2_3[offsetIdx].y * deltaHeight
+    //);
+
     vec4 dir = cameraRotate * vec4(pix.xy, -1.0, 0.0);  //can't tell which is better
-    //vec4 dir = cameraRotate * vec4(pix.xy+AA, -1.0, 0.0);
+    //vec4 dir = cameraRotate * vec4(pix.xy+jitter, -1.0, 0.0);
     ray.direction = normalize(dir.xyz);
 
 //----------------------------

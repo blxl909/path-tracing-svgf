@@ -16,13 +16,6 @@ GLuint curColor;
 GLuint Emission;
 GLuint Albedo;
 
-GLuint reprojectedColor;
-GLuint reprojectedmomenthistory;
-
-GLuint variance_filtered_color;
-
-GLuint atrous_flitered_color0;//swap buffer
-
 GLuint tmp_atrous_result;
 
 GLuint next_frame_color_input;//same as lastColor 
@@ -30,19 +23,10 @@ GLuint next_frame_color_input;//same as lastColor
 GLuint taa_output;
 
 
-GLuint lastColor;//atrous 的一级输出
-GLuint lastNormalDepth;
-GLuint lastMomentHistory;
-GLuint last_color_taa;
-
 RenderPass pass_path_tracing;
-RenderPass pass2;
-RenderPass pass_moment_filter;
-RenderPass pass_Atrous_filter;//save info pass
 RenderPass bilt_pass;
 RenderPass save_next_frame_pass;
-RenderPass pass_pre_info;
-RenderPass pass_taa;
+
 RenderPass pass3;
 NormalRenderPass init_pass;
 
@@ -322,34 +306,14 @@ int main(int argc, char** argv)
 	save_next_frame_pass.colorAttachments.push_back(next_frame_color_input);
 	save_next_frame_pass.bindData(false);
 	//----------------------------
+	RenderPass pass_taa;
 	pass_taa.program = getShaderProgram("./shaders/taa.frag", "./shaders/vshader.vsh");
 	taa_output = getTextureRGB32F(pass_taa.width, pass_taa.height);
 	pass_taa.colorAttachments.push_back(taa_output);
 	pass_taa.bindData(false);
 
-	glUseProgram(pass_taa.program);
-	glUniform1i(glGetUniformLocation(pass_taa.program, "screen_width"), SCR_WIDTH);
-	glUniform1i(glGetUniformLocation(pass_taa.program, "screen_height"), SCR_HEIGHT);
-	glUseProgram(0);
-	//----------------------------------------
-	//----------------------------------------
-
-	RenderPass next_frame_input;
-
-	next_frame_input.program = getShaderProgram("./shaders/save_frame_data.frag", "./shaders/vshader.vsh");
-
-	GLuint lastIllumination = getTextureRGB32F(next_frame_input.width, next_frame_input.height);
-	GLuint last_normal_depth = getTextureRGB32F(next_frame_input.width, next_frame_input.height);
-	GLuint last_Moments_HistoryLength = getTextureRGB32F(next_frame_input.width, next_frame_input.height);
-	GLuint last_acc_color = getTextureRGB32F(next_frame_input.width, next_frame_input.height);
-	next_frame_input.colorAttachments.push_back(lastIllumination);
-	next_frame_input.colorAttachments.push_back(last_normal_depth);
-	next_frame_input.colorAttachments.push_back(last_Moments_HistoryLength);
-	next_frame_input.colorAttachments.push_back(last_acc_color);
-
-	next_frame_input.bindData(false);
-
-
+	pass_taa.set_uniform_int("screen_width", camera.width);
+	pass_taa.set_uniform_int("screen_height", camera.height);
 
 	//----------------------------------------
 	RenderPass new_project_pass;
@@ -392,6 +356,25 @@ int main(int argc, char** argv)
 	svgf_modulate_pass.colorAttachments.push_back(modulate_color);
 
 	svgf_modulate_pass.bindData(false);
+	//----------------------------------------
+
+	RenderPass next_frame_input;
+
+	next_frame_input.program = getShaderProgram("./shaders/save_frame_data.frag", "./shaders/vshader.vsh");
+
+	GLuint lastIllumination = getTextureRGB32F(next_frame_input.width, next_frame_input.height);
+	GLuint last_normal_depth = getTextureRGB32F(next_frame_input.width, next_frame_input.height);
+	GLuint last_Moments_HistoryLength = getTextureRGB32F(next_frame_input.width, next_frame_input.height);
+	GLuint last_acc_color = getTextureRGB32F(next_frame_input.width, next_frame_input.height);
+	GLuint last_taa_color = getTextureRGB32F(next_frame_input.width, next_frame_input.height);
+
+	next_frame_input.colorAttachments.push_back(lastIllumination);
+	next_frame_input.colorAttachments.push_back(last_normal_depth);
+	next_frame_input.colorAttachments.push_back(last_Moments_HistoryLength);
+	next_frame_input.colorAttachments.push_back(last_acc_color);
+	next_frame_input.colorAttachments.push_back(last_taa_color);
+
+	next_frame_input.bindData(false);
 
 	//------------------------------------
 	RenderPass output_pass;
@@ -582,14 +565,6 @@ int main(int argc, char** argv)
 
 
 		//-------------------------------
-		next_frame_input.reset_texture_slot();
-		next_frame_input.set_texture_uniform(GL_TEXTURE_2D, next_frame_color_input, "texPass0");
-		next_frame_input.set_texture_uniform(GL_TEXTURE_2D, init_normal_depth, "texPass1");
-		next_frame_input.set_texture_uniform(GL_TEXTURE_2D, curMomentHistory, "texPass2");
-		next_frame_input.set_texture_uniform(GL_TEXTURE_2D, curColor, "accColor");
-
-		next_frame_input.draw();
-		//-----------------------------------
 		svgf_modulate_pass.reset_texture_slot();
 		svgf_modulate_pass.set_texture_uniform(GL_TEXTURE_2D, Albedo, "gAlbedo");
 		svgf_modulate_pass.set_texture_uniform(GL_TEXTURE_2D, Emission, "gEmission");
@@ -597,12 +572,31 @@ int main(int argc, char** argv)
 		svgf_modulate_pass.set_texture_uniform(GL_TEXTURE_2D, init_normal_depth, "gNormalAndLinearZ");
 		svgf_modulate_pass.draw();
 		//-----------------------------------
+		pass_taa.reset_texture_slot();
+
+		pass_taa.set_texture_uniform(GL_TEXTURE_2D, modulate_color, "currentColor");
+		pass_taa.set_texture_uniform(GL_TEXTURE_2D, last_taa_color, "previousColor");
+		pass_taa.set_texture_uniform(GL_TEXTURE_2D, init_velocity, "velocityTexture");
+		pass_taa.set_texture_uniform(GL_TEXTURE_2D, init_normal_depth, "normal_depth");
+		pass_taa.set_uniform_uint("frameCounter", camera.frameCounter);
+		pass_taa.draw();
+		//-----------------------------------
+		next_frame_input.reset_texture_slot();
+		next_frame_input.set_texture_uniform(GL_TEXTURE_2D, next_frame_color_input, "texPass0");
+		next_frame_input.set_texture_uniform(GL_TEXTURE_2D, init_normal_depth, "texPass1");
+		next_frame_input.set_texture_uniform(GL_TEXTURE_2D, curMomentHistory, "texPass2");
+		next_frame_input.set_texture_uniform(GL_TEXTURE_2D, curColor, "accColor");
+		next_frame_input.set_texture_uniform(GL_TEXTURE_2D, taa_output, "taaOutput");
+
+		next_frame_input.draw();
+
+		//----------------------------------
 		output_pass.reset_texture_slot();
 		if (debug_window.accumulate_color) {
 			output_pass.set_texture_uniform(GL_TEXTURE_2D, curColor, "texPass0");
 		}
 		else if (debug_window.final_pic) {
-			output_pass.set_texture_uniform(GL_TEXTURE_2D, modulate_color, "texPass0");
+			output_pass.set_texture_uniform(GL_TEXTURE_2D, taa_output, "texPass0");
 		}
 		else if(debug_window.svgf_reprojected_pic)
 		{
