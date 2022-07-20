@@ -31,7 +31,6 @@
 #include "Utils/gui_config.h"
 #include "Utils/BVH.h"
 
-
 using namespace glm;
 
 

@@ -134,7 +134,6 @@ void main(){
         return;
     }
 
-    // ��Χ3x3�ھ���������ٶ�����
     vec2 velocity = texture(velocityTexture, getClosestOffset()).rg;
     vec2 offsetUV = clamp(screenPosition - velocity, 0, 1);
     vec3 preColor = texture(previousColor, offsetUV).rgb;
@@ -147,8 +146,9 @@ void main(){
     preColor = UnToneMap(YCoCgR2RGB(preColor));
     nowColor = UnToneMap(YCoCgR2RGB(nowColor));
 
-    float c = 0.1f;
-    outColor = vec4(c * nowColor + (1-c) * preColor, 1.0);
+    float blendFactor = clamp(0.05 + length(velocity) * 100,0.0,1.0);
+    //blendFactor = 0.05f;
+    outColor = vec4(blendFactor * nowColor + (1-blendFactor) * preColor, 1.0);
     
 
 }

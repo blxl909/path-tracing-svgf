@@ -32,8 +32,6 @@ NormalRenderPass init_pass;
 
 
 
-
-
 mat4 pre_viewproj = camera.cam_proj_mat * camera.cam_view_mat;
 
 int main(int argc, char** argv)
@@ -108,12 +106,14 @@ int main(int argc, char** argv)
 	
 	readObj("models/clock.obj", vertices, triangles, m_clock, getTransformMatrix(vec3(0, 0, 0), vec3(0, 0, 0), vec3(1, 1, 1)), true, objIndex++);
 
+	/*Material m_plant;
+	m_plant.roughness = -1.0;
+	m_plant.metallic =-1.0;
+	m_plant.specular = 0.0;
+	m_plant.baseColor = vec3(-1, -1, -1);
+	readObj("models/plant.obj", vertices, triangles, m_plant, getTransformMatrix(vec3(0, 0, 0), vec3(-0.75, -0.5, 0), vec3(2, 2, 2)), false, objIndex++);*/
 
-	/*m.roughness = -1.0;
-	m.metallic =-1.0;
-	m.specular = 0.0;
-	m.baseColor = vec3(-1, -1, -1);
-	readObj("models/plant.obj", vertices, triangles, m, getTransformMatrix(vec3(0, 0, 0), vec3(-0.75, -0.5, 0), vec3(2, 2, 2)), false, objIndex++);*/
+
 
 	int nTriangles = triangles.size();
 	std::cout << "模型读取完成: 共 " << nTriangles << " 个三角形" << std::endl;
@@ -207,7 +207,7 @@ int main(int argc, char** argv)
 
 	// hdr 全景图
 	HDRLoaderResult hdrRes;
-	bool r = HDRLoader::load("./HDR/chinese_garden_2k.hdr", hdrRes);
+	bool r = HDRLoader::load("./HDR/room.hdr", hdrRes);
 	hdrMap = getTextureRGB32F(hdrRes.width, hdrRes.height);
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB32F, hdrRes.width, hdrRes.height, 0, GL_RGB, GL_FLOAT, hdrRes.cols);
 
@@ -383,11 +383,9 @@ int main(int argc, char** argv)
 
 
 	//----------------------------------------
-	//----------------------------------------
-	//----------------------------
-	bool use_normal_texture = false;
-	debug_gui debug_window;
+
 	parameter_config config;
+	static int select = debug_view_type::accumulate_color;
 
 	while (!glfwWindowShouldClose(window))
 	{
@@ -415,9 +413,6 @@ int main(int argc, char** argv)
 			ImGui::Begin("parameter settings");
 			ImGui::Text("control parameter during passes.");
 
-			/*ImGui::SliderFloat("reporject_depth_threshold", &config.reproj_depth_threshold, 0.0f, 1.0f);
-			ImGui::SliderFloat("reporject_normal_threshold", &config.reproj_normal_threshold, 0.0f, 1.0f);*/
-
 			ImGui::SliderFloat("color_clamp_threshold", &config.clamp_threshold, 1.0f, 10.0f);
 			ImGui::SliderInt("max_tracing_depth", &config.max_tracing_depth, 1, 6);
 
@@ -437,28 +432,34 @@ int main(int argc, char** argv)
 			ImGui::Begin("show pass image");                          // Create a window called "Hello, world!" and append into it.
 			ImGui::Text("pick a pass to show the output.");               // Display some text (you can use a format strings too)
 
-			if (ImGui::Button("path_tracing_pic_1spp")) {
-				camera.frameCounter = 0;
-				debug_window.update_debug_state(debug_view_type::path_tracing_pic_1spp);
-			}
-			if (ImGui::Button("svgf_reprojected_pic")) {
-				camera.frameCounter = 0;
-				debug_window.update_debug_state(debug_view_type::svgf_reprojected_pic);
-			}
-			if (ImGui::Button("final_pic")) {
-				camera.frameCounter = 0;
-				debug_window.update_debug_state(debug_view_type::final_pic);
-			}
-			if (ImGui::Button("accumulate_color")) {
-				camera.frameCounter = 0;
-				debug_window.update_debug_state(debug_view_type::accumulate_color);
-			}
-			ImGui::Text("normal texture will only have meaning when actually have normal texture");
-			if (ImGui::Checkbox("use_normal_texture", &use_normal_texture)) {
-				camera.frameCounter = 0;
-			}
 			
+			if (ImGui::RadioButton("path_tracing_pic_1spp", &select, debug_view_type::path_tracing_pic_1spp)) {
+				config.update_debug_pic_state(camera, debug_view_type::path_tracing_pic_1spp);
+			}
+			if (ImGui::RadioButton("svgf_reprojected_pic", &select, debug_view_type::svgf_reprojected_pic)) {
+				config.update_debug_pic_state(camera, debug_view_type::svgf_reprojected_pic);
+			}
+			if (ImGui::RadioButton("svgf_variance_pic", &select, debug_view_type::svgf_variance_pic)) {
+				config.update_debug_pic_state(camera, debug_view_type::svgf_variance_pic);
+			}
+			if (ImGui::RadioButton("svgf_atrous_pic", &select, debug_view_type::svgf_atrous_pic)) {
+				config.update_debug_pic_state(camera, debug_view_type::svgf_atrous_pic);
+			}
+			if (ImGui::RadioButton("svgf_modulate_pic", &select, debug_view_type::svgf_modulate_pic)) {
+				config.update_debug_pic_state(camera, debug_view_type::svgf_modulate_pic);
+			}
+			if (ImGui::RadioButton("taa_pic", &select, debug_view_type::taa_pic)) {
+				config.update_debug_pic_state(camera, debug_view_type::taa_pic);
+			}
+			if (ImGui::RadioButton("final_pic (same as taa_pic)", &select, debug_view_type::final_pic)) {
+				config.update_debug_pic_state(camera, debug_view_type::final_pic);
+			}
+			if (ImGui::RadioButton("accumulate_color", &select, debug_view_type::accumulate_color)) {
+				config.update_debug_pic_state(camera, debug_view_type::accumulate_color);
+			}
 
+			ImGui::Text("normal texture will only work if actually set normal texture.");
+			ImGui::Checkbox("use_normal_texture", &config.use_normal_texture);
 			//ImGui::SliderFloat("float", &f, 0.0f, 1.0f);            // Edit 1 float using a slider from 0.0f to 1.0f
 			//ImGui::ColorEdit3("clear color", (float*)&clear_color); // Edit 3 floats representing a color
 
@@ -488,8 +489,8 @@ int main(int argc, char** argv)
 		pass_path_tracing.set_uniform_mat4("cameraRotate", cameraRotate);
 		pass_path_tracing.set_uniform_uint("frameCounter", camera.frameCounter);
 		pass_path_tracing.set_uniform_int("hdrResolution", hdrResolution);
-		pass_path_tracing.set_uniform_bool("use_normal_map", use_normal_texture);
-		pass_path_tracing.set_uniform_bool("accumulate", debug_window.accumulate_color);
+		pass_path_tracing.set_uniform_bool("use_normal_map", config.use_normal_texture);
+		pass_path_tracing.set_uniform_bool("accumulate", config.accumulate_color);
 		pass_path_tracing.set_uniform_float("clamp_threshold", config.clamp_threshold);
 		pass_path_tracing.set_uniform_int("max_tracing_depth", config.max_tracing_depth);
 
@@ -497,7 +498,7 @@ int main(int argc, char** argv)
 		pass_path_tracing.set_texture_uniform(GL_TEXTURE_BUFFER, trianglesTextureBuffer, "triangles");
 		pass_path_tracing.set_texture_uniform(GL_TEXTURE_BUFFER, nodesTextureBuffer, "nodes");
 
-		if (debug_window.accumulate_color) {
+		if (config.accumulate_color) {
 			pass_path_tracing.set_texture_uniform(GL_TEXTURE_2D, last_acc_color, "lastFrame");
 		}
 
@@ -592,25 +593,38 @@ int main(int argc, char** argv)
 
 		//----------------------------------
 		output_pass.reset_texture_slot();
-		if (debug_window.accumulate_color) {
-			output_pass.set_texture_uniform(GL_TEXTURE_2D, curColor, "texPass0");
-		}
-		else if (debug_window.final_pic) {
-			output_pass.set_texture_uniform(GL_TEXTURE_2D, taa_output, "texPass0");
-		}
-		else if(debug_window.svgf_reprojected_pic)
+		
+		switch (select)
 		{
-			output_pass.set_texture_uniform(GL_TEXTURE_2D, curIllumination, "texPass0");
-		}
-		else if (debug_window.svgf_variance_pic) {
-			output_pass.set_texture_uniform(GL_TEXTURE_2D, variance_compute_illumination, "texPass0");
-		}
-		else if (debug_window.svg_atrous_pic) {
-			output_pass.set_texture_uniform(GL_TEXTURE_2D, modulate_color, "texPass0");
-		}
-		else if (debug_window.path_tracing_pic_1spp) {
+		case debug_view_type::accumulate_color:
 			output_pass.set_texture_uniform(GL_TEXTURE_2D, curColor, "texPass0");
+			break;
+		case debug_view_type::final_pic:
+			output_pass.set_texture_uniform(GL_TEXTURE_2D, taa_output, "texPass0");
+			break;
+		case debug_view_type::svgf_reprojected_pic:
+			output_pass.set_texture_uniform(GL_TEXTURE_2D, curIllumination, "texPass0");
+			break;
+		case debug_view_type::path_tracing_pic_1spp:
+			output_pass.set_texture_uniform(GL_TEXTURE_2D, curColor, "texPass0");
+			break;
+		case debug_view_type::svgf_variance_pic:
+			output_pass.set_texture_uniform(GL_TEXTURE_2D, variance_compute_illumination, "texPass0");
+			break;
+		case debug_view_type::svgf_atrous_pic:
+			output_pass.set_texture_uniform(GL_TEXTURE_2D, atrous_output, "texPass0");
+			break;
+		case debug_view_type::svgf_modulate_pic:
+			output_pass.set_texture_uniform(GL_TEXTURE_2D, modulate_color, "texPass0");
+			break;
+		case debug_view_type::taa_pic:
+			output_pass.set_texture_uniform(GL_TEXTURE_2D, taa_output, "texPass0");
+			break;
+		default:
+			break;
 		}
+
+
 		
 		output_pass.draw();
 		//-------------------------------
