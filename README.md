@@ -14,4 +14,4 @@ the accumulate color after 133 iterations
 ## TODO
 1、add some documents to full explain how to implement it  
 2、add Cmake file  
-3、refactor code, now it's a litte bit messy
+3、refactor code, now it's a little bit messy
