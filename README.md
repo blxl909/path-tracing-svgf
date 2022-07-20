@@ -12,6 +12,6 @@ SVGF will reconstruct image,here is the result
 the accumulate color after 133 iterations  
 ![acc_color](https://github.com/blxl909/path-tracing-svgf/blob/master/result/accumulate_output.png)
 ## TODO
-1、add some documents to full explain how to implement it  
+1、add some documents to fully explain how to implement this algorithm  
 2、add Cmake file  
 3、refactor code, now it's a little bit messy
