@@ -1,0 +1,9 @@
+/x64
+*.sln
+*.filters
+*.user
+*.vcxproj
+*.vcxproj.user
+*imgui.ini
+/.vs
+lib/root_directory.h
