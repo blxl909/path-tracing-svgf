@@ -1,6 +1,7 @@
 # path-tracing-svgf
 an OpenGL based path tracer with SVGF(Spatiotemporal Variance-Guided Filter)  
-more detail about SVGF see [paper link here](http://behindthepixels.io/assets/files/hpg17_svgf.pdf)
+more detail about SVGF see [paper link here](http://behindthepixels.io/assets/files/hpg17_svgf.pdf)  
+this work is based on the project [EzRT](https://github.com/AKGWSB/EzRT) and [Falcor](https://github.com/NVIDIAGameWorks/Falcor) 
 ## result
 ### input
 SVGF algorithm takes in one sample per pixel image input use normal path tracing (with next event estimation)  
