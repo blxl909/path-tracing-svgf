@@ -18,6 +18,9 @@ uniform sampler2D gNormalDepthFwidth;//Normal fwidth x,depth fwidth y,linearz z
 uniform float inv_screen_width;
 uniform float inv_screen_height;
 
+uniform float depth_threshold;
+uniform float normal_threshold;
+
 
 
 vec3 demodulate(vec3 c, vec3 albedo)
@@ -31,10 +34,10 @@ bool isReprjValid(vec2 coord, float Z, float Zprev, float fwidthZ, vec3 normal, 
 	if(coord.x<0.0||coord.x>1.0||coord.y<0.0||coord.y>1.0) return false;
 
     // check if deviation of depths is acceptable
-    if (abs(Zprev - Z) / (fwidthZ + 1e-2f) > 10.f) return false;
+    if (abs(Zprev - Z) / (fwidthZ + 1e-2f) > depth_threshold) return false;
 
     // check normals for compatibility
-    if (distance(normal, normalPrev) / (fwidthNormal + 1e-2) > 16.0) return false;
+    if (distance(normal, normalPrev) / (fwidthNormal + 1e-2) > normal_threshold) return false;
 
     return true;
 }

@@ -1,10 +1,6 @@
 #ifndef BVH_H
 #define BVH_H
 
-#include <vector>
-#include <glm/glm.hpp>
-#include <glm/gtc/matrix_transform.hpp>
-#include <glm/gtc/type_ptr.hpp>
 #include <algorithm>
 #include "Utils/Material.h"
 #include "Utils/Triangle.h"
@@ -19,6 +15,11 @@ struct BVHNode {
 	glm::vec3 AA, BB;        // 碰撞盒
 };
 
+struct BVHNode_encoded {
+	glm::vec3 childs;        // (left, right, 保留)
+	glm::vec3 leafInfo;      // (n, index, 保留)
+	glm::vec3 AA, BB;
+};
 
 // 按照三角形中心排序 -- 比较函数
 bool cmpx(const Triangle& t1, const Triangle& t2) {

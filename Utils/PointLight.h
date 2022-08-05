@@ -1,10 +1,6 @@
 #ifndef POINTLIGHT_H
 #define POINTLIGHT_H
 
-#include <glm/glm.hpp>
-#include <glm/gtc/matrix_transform.hpp>
-#include <glm/gtc/type_ptr.hpp>
-
 class PointLight {
 public:
 	glm::vec3 position = glm::vec3(0);

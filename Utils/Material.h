@@ -1,10 +1,6 @@
 #ifndef MATERIAL_H
-#define  MATERIAL_H
+#define MATERIAL_H
 
-
-#include "imgui/imgui.h"
-#include "imgui/imgui_impl_glfw.h"
-#include "imgui/imgui_impl_opengl3.h"
 
 struct Material {
 	glm::vec3 emissive = glm::vec3(0, 0, 0);  // 作为光源时的发光颜色

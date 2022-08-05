@@ -516,6 +516,7 @@ vec2 CranleyPattersonRotation(vec2 p) {
 
 // ----------------------------------------------------------------------------- //
 
+
 float sqr(float x) { 
     return x*x; 
 }
@@ -879,26 +880,6 @@ float misMixWeight(float a, float b) {
 
 // ----------------------------------------------------------------------------- //
 
-// nee light sampling advise 
-
-// Your question is a bit hard to answer because it depends what is exactly meant by samples.
-// When performing NEE, you can sample N light sources (figuring out how to select these N light sources is another issue). 
-// For a point light source, you can simply perform an intersection test and add the contribution. 
-// For an area light, you first need to randomly generate a point (a position) on the light source, 
-// this is "sampling the light source". 
-// If you have a textured area light, 
-// then you may want to generate more random positions on your light source so that the textured effect is visible.
-// For a point light, this is unnecessary since there is a singular point to sample anyway. For directional lights,
-// all the light comes from exactly one direction (by definition) so only one sample is necessary. For an environment map,
-// light can come from all directions, so you can try to sample several direction
-// (based on the luminance of the map for instance).
-// For each sample you take, there will be an intersection test, 
-// and this is a performance tradeoff.
-
-// if((is_previous_specular || i == 0) && any(greaterThan(hitMaterial.le, vec3(0)))) {
-//                 color += throughput * hitMaterial.le;
-//                 break;
-// }
 
 vec3 calculatePointLight(Ray ray, HitResult hitdata,inout float pdf){
     if(pointLightSize==0){
@@ -906,7 +887,7 @@ vec3 calculatePointLight(Ray ray, HitResult hitdata,inout float pdf){
         return vec3(0);
     }
 
-    pdf = (float(pointLightSize)) / (2.0 * PI);//半球面采样
+    pdf = (2.0 * PI)/(float(pointLightSize));//半球面采样
 
     PointLight light = getPointLight(int(rand()*pointLightSize));
 
@@ -937,9 +918,7 @@ vec3 calculatePointLight(Ray ray, HitResult hitdata,inout float pdf){
     //radiance * fr * cos / pdf
 }
 
-//do not forget to use sobel sequence
-//be awared about this pdf, it may cause NAN problem?
-//maybe check if return vec3(0) to avoid this 
+
 vec3 hdriLight(Ray ray, HitResult hitdata,inout float pdf){
     float r1 = rand();
     float r2 = rand();
@@ -978,18 +957,99 @@ void shade(Ray ray, HitResult hitdata, vec3 newDir, inout vec3 hitLight, inout v
     vec3 pointLightCalc = calculatePointLight(ray,hitdata,pointPdf);
     vec3 brdfLightCalc = hitdata.material.emissive * (brdf_Disney * abs(dot(newDir, hitdata.normal))) / brdfPdf;
 
-    float sum_weight = hdriPdf + pointPdf + brdfPdf + epsilon; //hdriPdf won't be zero , check later
-
+    float sum_weight = hdriPdf+ pointPdf + brdfPdf + epsilon; //hdriPdf won't be zero , check later
+    
     float w1 = hdriPdf  / sum_weight;
     float w2 = pointPdf / sum_weight;
     float w3 = brdfPdf  / sum_weight;
 
     hitLight = reduction * (w1 * hdriLightCalc + w2 * pointLightCalc + w3 * brdfLightCalc);
-
-    reduction *= (brdf_Disney * abs(dot(newDir, hitdata.normal))) / brdfPdf;
+    reduction *= (brdf_Disney * abs(dot(newDir, hitdata.normal))) / brdfPdf ;
 }
 
 
+// 路径追踪 -- 重要性采样版本
+vec3 pathTracingImportanceSampling(HitResult hit, int maxBounce) {
+
+    vec3 Lo = vec3(0);      // 最终的颜色
+    vec3 history = vec3(1); // 递归积累的颜色
+
+    for(int bounce=0; bounce<maxBounce; bounce++) {
+        vec3 V = -hit.viewDir;
+        vec3 N = hit.normal;       
+
+        // HDR 环境贴图重要性采样    
+        Ray hdrTestRay;
+        hdrTestRay.startPoint = hit.hitPoint;
+        hdrTestRay.direction = SampleHdr(rand(), rand());
+
+        // 进行一次求交测试 判断是否有遮挡
+        if(dot(N, hdrTestRay.direction) > 0.0) { // 如果采样方向背向点 p 则放弃测试, 因为 N dot L < 0            
+            HitResult hdrHit = hitBVH(hdrTestRay);
+            
+            // 天空光仅在没有遮挡的情况下积累亮度
+            if(!hdrHit.isHit) {
+                // 获取采样方向 L 上的: 1.光照贡献, 2.环境贴图在该位置的 pdf, 3.BRDF 函数值, 4.BRDF 在该方向的 pdf
+                vec3 L = hdrTestRay.direction;
+                vec3 color = hdrColor(L);
+                float pdf_light = hdrPdf(L, hdrResolution);
+                vec3 f_r = BRDF_Evaluate(V, N, L, hit.material);
+                float pdf_brdf = BRDF_Pdf(V, N, L, hit.material);
+                
+                // 多重重要性采样
+                float mis_weight = misMixWeight(pdf_light, pdf_brdf);
+                Lo += mis_weight * history * color * f_r * dot(N, L) / pdf_light;
+                //Lo += history * color * f_r * dot(N, L) / pdf_light;   // 尝龟
+            }
+        }
+        
+        // 获取 3 个随机数
+        vec2 uv = sobolVec2(frameCounter+1u, uint(bounce));
+        uv = CranleyPattersonRotation(uv);
+        float xi_1 = uv.x;
+        float xi_2 = uv.y;
+        float xi_3 = rand();    // xi_3 是决定采样的随机数, 朴素 rand 就好
+
+        // 采样 BRDF 得到一个方向 L
+        vec3 L = SampleBRDF(xi_1, xi_2, xi_3, V, N, hit.material); 
+        float NdotL = dot(N, L);
+        if(NdotL <= 0.0) break;
+
+        // 发射光线
+        Ray randomRay;
+        randomRay.startPoint = hit.hitPoint;
+        randomRay.direction = L;
+        HitResult newHit = hitBVH(randomRay);
+
+        // 获取 L 方向上的 BRDF 值和概率密度
+        vec3 f_r = BRDF_Evaluate(V, N, L, hit.material);
+        float pdf_brdf = BRDF_Pdf(V, N, L, hit.material);
+        if(pdf_brdf <= 0.0) break;
+
+        // 未命中        
+        if(!newHit.isHit) {
+            vec3 color = hdrColor(L);
+            float pdf_light = hdrPdf(L, hdrResolution);            
+            
+            // 多重重要性采样
+            float mis_weight = misMixWeight(pdf_brdf, pdf_light);   // f(a,b) = a^2 / (a^2 + b^2)
+            Lo += mis_weight * history * color * f_r * NdotL / pdf_brdf;
+            //Lo += history * color * f_r * NdotL / pdf_brdf;   // 尝龟
+
+            break;
+        }
+        
+        // 命中光源积累颜色
+        vec3 Le = newHit.material.emissive;
+        Lo += history * Le * f_r * NdotL / pdf_brdf;             
+
+        // 递归(步进)
+        hit = newHit;
+        history *= f_r * NdotL / pdf_brdf;   // 累积颜色
+    }
+    
+    return Lo;
+}
 
 // ----------------------------------------------------------------------------- //
 
@@ -998,44 +1058,26 @@ void main() {
     
     ray.startPoint = eye;
     vec2 AA = vec2((rand()-0.5)/float(width), (rand()-0.5)/float(height));
-
-    //uint offsetIdx = frameCounter % 8u;
-    //vec2 jitter = vec2(
-    //    (Halton_2_3[offsetIdx].x - 0.5f) /float(width),
-    //    (Halton_2_3[offsetIdx].y - 0.5f) /float(height)
-    //);
-
-    //add jitter, I try to use halton sequence, but the result looks not so good
-    //so right now just use random jitter
-    vec4 dir = cameraRotate * vec4(pix.xy+AA, -1.0, 0.0);
+    vec4 dir = cameraRotate * vec4(pix.xy, -1.0, 0.0);
     ray.direction = normalize(dir.xyz);
 
 //----------------------------
-    //have three render target, remember to fill
+    //to get output(for convenience)
+    vec3 color = vec3(0);
     // Accumulated radiance
-    vec3 color = vec3(0);//to get output(for convenience)
-
     vec3 light = vec3(0);
-
     // How much light is lost in the path
     vec3 reduction = vec3(1);
 
-    //------------------
     HitResult firstHit;
-    vec3 albe=vec3(1);
-    //------------------
+
     int MAXBOUNCES = max_tracing_depth;
     for (int i = 0; i < MAXBOUNCES; i++){
+
 
         HitResult nearestHit = hitBVH(ray);
 
         if(i == 0){
-            if(!nearestHit.isHit){
-                Albedo = vec4(1);
-            }else{
-                Albedo = vec4(nearestHit.material.baseColor,1.0);
-                albe=vec3(nearestHit.material.baseColor);
-            }
             firstHit = nearestHit;
         }
 
@@ -1055,9 +1097,9 @@ void main() {
         float NdotL = dot(nearestHit.normal, L);
         if(NdotL <= 0.0) break;
 
-        vec3 hitLight;//contains the result at this iteration
+        //contains the result at this iteration
+        vec3 hitLight;
         shade(ray,nearestHit,L,hitLight,reduction);
-
 
         light += hitLight;
 
@@ -1070,8 +1112,6 @@ void main() {
         color = light;
     }
 
-
- //------------------------------   
     // 和上一帧混合
     if(accumulate){
         vec3 lastColor = texture2D(lastFrame, pix.xy*0.5+0.5).rgb;
@@ -1079,11 +1119,9 @@ void main() {
     }
     
 
-
     fragColor=vec4(color,1.0);
     Emission = vec4(firstHit.material.emissive,1.0);
     Albedo = vec4(firstHit.material.baseColor,1.0);
-    
     
 
     

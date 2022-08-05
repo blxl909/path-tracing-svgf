@@ -5,16 +5,14 @@ layout (location = 2) out vec4 velocity;
 layout (location = 3) out vec4 gNormalLinearZFwidth;
 
 
-
 in vec3 FragPos;
 in vec3 Normal;
 in vec4 preScreenPosition;
 in vec4 nowScreenPosition;
 
-
-
 void main()
 {    
+    //gl_FragCoord.wµÄÖµÊÇ1/w
     float linearZ = gl_FragCoord.z / gl_FragCoord.w;
     gNormal =vec4 (Normal,linearZ);
     
@@ -25,8 +23,6 @@ void main()
     velocity.xy = newPos - prePos;
     velocity.w = 1.0f;
 
-   
     gNormalLinearZFwidth = vec4(length(fwidth(Normal)),max(abs(dFdx(linearZ)), abs(dFdy(linearZ))),linearZ,1.0);
     
-
 }

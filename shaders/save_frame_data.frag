@@ -15,6 +15,7 @@ uniform sampler2D texPass2;//reprojectionpass  pass2 Êä³öµÄMomenandtHistory
 uniform sampler2D accColor;
 uniform sampler2D taaOutput;
 
+
 void  main(){
     vec4 next_color=texture2D(texPass0,pix.xy*0.5+0.5).rgba;
     vec4 next_normaldepth=texture2D(texPass1,pix.xy*0.5+0.5).rgba;

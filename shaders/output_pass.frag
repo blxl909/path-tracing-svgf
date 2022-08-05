@@ -7,6 +7,7 @@ uniform sampler2D texPass0;
 uniform sampler2D texPass1;
 uniform sampler2D texPass2;
 
+uniform bool accumulate;
 
 vec3 tonrMapping(in vec3 c, float limit){
     float luminance=0.3*c.x+0.6*c.y+0.1*c.z;
@@ -16,10 +17,9 @@ vec3 tonrMapping(in vec3 c, float limit){
 
 void  main(){
     vec3 color=texture2D(texPass0,pix.xy*0.5+0.5).rgb;
-    
+
     color=tonrMapping(color,1.5);
     color=pow(color,vec3(1.0/2.2));
-
     
     fragColor=vec4(color.rgb,1.0);
     

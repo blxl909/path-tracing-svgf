@@ -20,7 +20,6 @@ uniform uint frameCounter;
 
 void main()
 {
-
     vec4 worldPos = vec4(aPos, 1.0);
 
     gl_Position = projection * view * worldPos;
@@ -30,6 +29,5 @@ void main()
 
     FragPos = worldPos.xyz;
     Normal = aNormal;
-
 
 }

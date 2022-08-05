@@ -71,7 +71,6 @@ void  main(){
         {
             for (int xx = -radius; xx <= radius; xx++)
             {
-				//-----------------------------
                 vec2 p     = uv + vec2(xx * inv_screen_width,yy * inv_screen_height);
                 bool inside = p.x >= 0.0 && p.x <= 1.0 && p.y >= 0.0 && p.y <= 1.0;
 

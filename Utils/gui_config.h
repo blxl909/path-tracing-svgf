@@ -1,11 +1,6 @@
 #ifndef GUI_CONFIG_H
 #define GUI_CONFIG_H
 
-#include <vector>
-#include "imgui/imgui.h"
-#include "imgui/imgui_impl_glfw.h"
-#include "imgui/imgui_impl_opengl3.h"
-
 #include "Utils/camera.h"
 
 
@@ -27,8 +22,8 @@ public:
 	float sigma_n = 128.0f;
 	float sigma_l = 4.0f;
 
-	float reproj_normal_threshold = 0.8f;
-	float reproj_depth_threshold = 0.2f;
+	float reproj_normal_threshold = 16.0f;
+	float reproj_depth_threshold = 10.0f;
 
 	float clamp_threshold =10.0f;
 	int max_tracing_depth = 2;
